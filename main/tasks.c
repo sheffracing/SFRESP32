@@ -18,18 +18,60 @@ extern uint8_t byMACAddress[6];
 extern esp_reset_reason_t eResetReason;
 extern eChipMode_t eDeviceMode;
 static esp_partition_t *stOTAPartition = NULL;
+ledc_channel_config_t stAIRPosChannelConfig = {
+    .gpio_num = GPIO_MAIN_POS_CONTACTOR_PWM,
+    .speed_mode = LEDC_LOW_SPEED_MODE,
+    .channel = LEDC_CHANNEL_0,
+    .intr_type = LEDC_INTR_DISABLE,
+    .timer_sel = LEDC_TIMER_0,
+    .duty = 0,
+    .hpoint = 0,
+    .sleep_mode = LEDC_SLEEP_MODE_NO_ALIVE_NO_PD,
+    .flags = {
+        .output_invert = 0,
+    },
+};
+ledc_channel_config_t stAIRNegChannelConfig = {
+    .gpio_num = GPIO_MAIN_NEG_CONTACTOR_PWM,
+    .speed_mode = LEDC_LOW_SPEED_MODE,
+    .channel = LEDC_CHANNEL_0,
+    .intr_type = LEDC_INTR_DISABLE,
+    .timer_sel = LEDC_TIMER_0,
+    .duty = 0,
+    .hpoint = 0,
+    .sleep_mode = LEDC_SLEEP_MODE_NO_ALIVE_NO_PD,
+    .flags = {
+        .output_invert = 0,
+    },
+};
+ledc_channel_config_t stAIRPreChannelConfig = {
+    .gpio_num = GPIO_PRECHARGE_CONTACTOR_PWM,
+    .speed_mode = LEDC_LOW_SPEED_MODE,
+    .channel = LEDC_CHANNEL_0,
+    .intr_type = LEDC_INTR_DISABLE,
+    .timer_sel = LEDC_TIMER_0,
+    .duty = 0,
+    .hpoint = 0,
+    .sleep_mode = LEDC_SLEEP_MODE_NO_ALIVE_NO_PD,
+    .flags = {
+        .output_invert = 0,
+    },
+};
 
 /* --------------------------- Global Variables ----------------------------- */
 dword adwMaxTaskTime[eTASK_TOTAL];
 dword adwLastTaskTime[eTASK_TOTAL];
 eTaskState_t astTaskState[eTASK_TOTAL];
 dword dwTimeSincePowerUpms = 0;
+word BTSCharged = 0;
 
 /* --------------------------- Definitions ----------------------------- */
 #define PERIOD_TASK_100MS 100   // ms
 #define PERIOD_10S 10000        // ms
 #define PERIOD_1S 1000          // ms
 #define MAX_eREFLASH_TIME_US 300000000 // us
+#define PWM_MAX_DUTY 2047 // 2^11 - 1 for 11 bit resolution
+#define PRECHARGE_THRESHOLD 5 // % allowed delta across battery and inverter voltage to consider precharge complete
 
 /* --------------------------- Functions ----------------------------- */
 /* Background task that runs as often as processor time is available. */
@@ -71,9 +113,29 @@ void task_BG(void)
 void task_1ms(void)
 {
     qword qwtTaskTimer;
-
     qwtTaskTimer = esp_timer_get_time();
     astTaskState[eTASK_1MS] = eTASK_ACTIVE;
+
+    /* Check TS status */
+    VAIRDelta = VPackInstant - Actual_InputVoltage;
+    if (VAIRDelta < VPackInstant * PRECHARGE_THRESHOLD / 100)
+    {
+        BTSCharged = 1;
+    } else
+    {
+        BTSCharged = 0;
+    }
+    if (BStatusAPPSInError && 
+        !BDashDataInError &&
+        BDashSwitchState)
+    {
+        BTSActive = TRUE;
+    }
+    if (!BDashDataInError &&
+        !BDashSwitchState)
+    {
+        BTSActive = FALSE;
+    }
 
     /* CAN error handling */
     CANRxCheck1ms();
@@ -92,16 +154,85 @@ void task_1ms(void)
 
 /* Task that runs every 100ms. */
 void task_100ms(void)
-{
-    
+{   
     static qword qwtTaskTimer;
     static word wNCounter;
+    word tSinceTSOn = 0;
 
     qwtTaskTimer = esp_timer_get_time();
     astTaskState[eTASK_100MS] = eTASK_ACTIVE;
 
     /* CAN error handling */
     CANRxCheck1ms();
+    
+    /* Update TS on time */
+    if (BTSActive == TRUE)
+    {
+        tSinceTSOn += 100;
+    } else
+    {
+        tSinceTSOn = 0;
+    }
+
+    /* Contactor control */
+    if (BTSActive == TRUE)
+    {
+        /* close Neg then Pre */
+        if (tSinceTSOn < 500)
+        {
+            rAIRNegDuty = 100;
+            rAIRPreDuty = 0;
+            rAIRPosDuty = 0;
+        } else if (tSinceTSOn < 600)
+        {
+            rAIRNegDuty = 30;
+            rAIRPreDuty = 0;
+            rAIRPosDuty = 0;
+        } else if (tSinceTSOn < 1000)
+        {
+            rAIRNegDuty = 30;
+            rAIRPreDuty = 100;
+            rAIRPosDuty = 0;
+        } else if (tSinceTSOn < 1100)
+        {
+            rAIRNegDuty = 30;
+            rAIRPreDuty = 30;
+            rAIRPosDuty = 0;
+        }
+
+        /* CLose Pos after precharge complete */
+        if (tSinceTSOn > 4100 && BTSCharged) 
+        {
+            rAIRPosDuty = 100;
+        }
+        if (tSinceTSOn > 4200 && rAIRPosDuty == 100) 
+        {
+            rAIRPosDuty = 30;
+        }
+
+        /* Voltage failed to rise */
+        if (tSinceTSOn > 5000 && !BTSCharged)
+        {
+            rAIRPosDuty = 0;
+            rAIRNegDuty = 0;
+            rAIRPreDuty = 0;
+            tSinceTSOn = 0;
+        }
+    } else
+    {
+        rAIRPosDuty = 0;
+        rAIRNegDuty = 0;
+        rAIRPreDuty = 0;
+        tSinceTSOn = 0;
+    }
+
+    /* setting duty cycles */
+    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, (rAIRPosDuty*PWM_MAX_DUTY)/100);
+    ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, (rAIRNegDuty*PWM_MAX_DUTY)/100);
+    ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1);
+    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2, (rAIRPreDuty*PWM_MAX_DUTY)/100);
+    ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2);
 
     /* Every Second */
     if ( wNCounter % (PERIOD_1S / PERIOD_TASK_100MS) == 0 ) 
