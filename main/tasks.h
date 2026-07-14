@@ -27,6 +27,7 @@ void task_1ms(void);
 void task_100ms(void);
 void reflash_task_100ms(void);
 void pin_toggle(gpio_num_t pin);
+void read_pin(void);
 void reflash_task_BG();
 
 #define SFRTasks

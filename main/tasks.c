@@ -6,7 +6,7 @@ Tasks are:
     task_1ms: Task that runs every 1ms.
     task_100ms: Task that runs every 100ms.
 
-Written by Cole Perera and Aditya Parnandi for Sheffield Formula Racing 2025
+Written by Cole Perera, Aditya Parnandi and Daniel Hartley for Sheffield Formula Racing 2025
 */
 #include "tasks.h"
 
@@ -25,6 +25,11 @@ dword adwLastTaskTime[eTASK_TOTAL];
 eTaskState_t astTaskState[eTASK_TOTAL];
 dword dwTimeSincePowerUpms = 0;
 
+extern bool BDashSwitchState;
+extern bool BDashButtonState[2];
+bool previous_switch1_state = 0;
+bool previous_button1_state = 0;
+bool previous_button2_state = 0;
 /* --------------------------- Definitions ----------------------------- */
 #define PERIOD_TASK_100MS 100   // ms
 #define PERIOD_10S 10000        // ms
@@ -78,6 +83,14 @@ void task_1ms(void)
     /* CAN error handling */
     CANRxCheck1ms();
 
+    //Read switch states
+    read_pin();
+
+    //Send can message is switch state changed
+    if(BDashSwitchState != previous_switch1_state || BDashButtonState[0] != previous_button1_state || BDashButtonState[1] != previous_button2_state){
+        DashDataTx(stCANBus0);
+    }
+
     /* Update time since power up */
     dwTimeSincePowerUpms++;
 
@@ -102,6 +115,9 @@ void task_100ms(void)
 
     /* CAN error handling */
     CANRxCheck1ms();
+
+    //Send dash switch data
+    DashDataTx(stCANBus0);
 
     /* Every Second */
     if ( wNCounter % (PERIOD_1S / PERIOD_TASK_100MS) == 0 ) 
@@ -232,4 +248,14 @@ void pin_toggle(gpio_num_t ePin)
     static boolean BLEDState = false;
     BLEDState = !BLEDState;
     gpio_set_level(ePin, BLEDState);
+}
+
+void read_pin()
+{
+    previous_switch1_state = BDashSwitchState;
+    previous_button1_state = BDashButtonState[0];
+    previous_button2_state = BDashButtonState[1];
+    BDashSwitchState = gpio_get_level(GPIO_SWITCH_1_IN);
+    BDashButtonState[0] = gpio_get_level(GPIO_BUTTON_1_IN);
+    BDashButtonState[1] = gpio_get_level(GPIO_BUTTON_2_IN);
 }

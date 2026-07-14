@@ -1,9 +1,9 @@
 /*
-main.c | CAN Blaster | ESP32-C6 | Sheffield Formula Racing
-File contains the main function for the ESP32-C6 based CAN Blaster.
-This program sends set can messages out to the bus to test loading and other devicess recieve functionality.
+main.c | Dash | ESP32-C6 | Sheffield Formula Racing
+File contains the main function for the ESP32-C6 based Dash.
+This program reads 3 buttons and updates the CAN bus whenever there are changes or every 100ms.
 
-Written by Cole Perera for Sheffield Formula Racing 2025
+Written by Cole Perera and Daniel Hartley for Sheffield Formula Racing 2025
 */
 
 /* --------------------------- Includes ----------------------------- */
@@ -41,6 +41,8 @@ esp_reset_reason_t eResetReason;
 eChipMode_t eDeviceMode = eNORMAL;
 spi_device_handle_t MCP320XDevs[2];
 
+extern bool BDashSwitchState;
+extern bool BDashButtonState[2];
 /* --------------------------- Function prototypes ----------------------------- */
 static void timers_init(void);
 static void main_init(void);
@@ -196,6 +198,33 @@ static void GPIO_init(void)
         .intr_type = GPIO_INTR_DISABLE
     };
     gpio_config(&onboardLEDConfig);
+
+    gpio_config_t switch1Config = {
+        .pin_bit_mask = 1ULL << GPIO_SWITCH_1_IN,
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = 0,
+        .pull_down_en = 0,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    gpio_config(&switch1Config);
+
+    gpio_config_t button1Config = {
+        .pin_bit_mask = 1ULL << GPIO_BUTTON_1_IN,
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = 0,
+        .pull_down_en = 0,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    gpio_config(&button1Config);
+
+    gpio_config_t button2Config = {
+        .pin_bit_mask = 1ULL << GPIO_BUTTON_2_IN,
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = 0,
+        .pull_down_en = 0,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    gpio_config(&button2Config);
 }
 
 void set_device_mode(eChipMode_t mode)
