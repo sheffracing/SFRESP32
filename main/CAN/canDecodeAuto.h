@@ -95,6 +95,14 @@ extern uint8_t tLastTaskTimeBGTempMon;
 extern uint8_t tMaxTaskTimeBGTempMon;
 extern uint16_t tSincePowerUpTempMon;
 extern uint8_t NLastResetReasonTempMon;
+extern uint8_t tLastTaskTime1msContactorDriver;
+extern uint8_t tMaxTaskTime1msContactorDriver;
+extern uint8_t tLastTaskTime100msContactorDriver;
+extern uint8_t tMaxTaskTime100msContactorDriver;
+extern uint8_t tLastTaskTimeBGContactorDriver;
+extern uint8_t tMaxTaskTimeBGContactorDriver;
+extern uint16_t tSincePowerUpContactorDriver;
+extern uint8_t NLastResetReasonContactorDriver;
 extern float CMD_TargetAcCurrent;
 extern bool BDashSwitchState;
 extern bool BDashButtonState[2];
@@ -288,6 +296,8 @@ extern uint32_t tSinceMCUStatusDyno;
 extern bool BMCUStatusDynoInError;
 extern uint32_t tSinceMCUStatusTempMon;
 extern bool BMCUStatusTempMonInError;
+extern uint32_t tSinceMCUStatusContactorDriver;
+extern bool BMCUStatusContactorDriverInError;
 extern uint32_t tSinceSetAcCurrent;
 extern bool BSetAcCurrentInError;
 extern uint32_t tSinceDashData;
@@ -441,6 +451,9 @@ extern bool BTempMonAddressCastInError;
 #define MCUSTATUSTEMPMON_ID 0x1A
 #define MCUSTATUSTEMPMON_PERIOD_MS 1000
 #define MCUSTATUSTEMPMON_THRESH_MS 5000
+#define MCUSTATUSCONTACTORDRIVER_ID 0x1B
+#define MCUSTATUSCONTACTORDRIVER_PERIOD_MS 1000
+#define MCUSTATUSCONTACTORDRIVER_THRESH_MS 5000
 #define SETACCURRENT_ID 0x24
 #define SETACCURRENT_PERIOD_MS 100
 #define SETACCURRENT_THRESH_MS 500
@@ -644,6 +657,8 @@ esp_err_t MCUStatusDynoRx(CAN_frame_t stFrame);
 esp_err_t MCUStatusDynoTx(twai_node_handle_t stCANBus);
 esp_err_t MCUStatusTempMonRx(CAN_frame_t stFrame);
 esp_err_t MCUStatusTempMonTx(twai_node_handle_t stCANBus);
+esp_err_t MCUStatusContactorDriverRx(CAN_frame_t stFrame);
+esp_err_t MCUStatusContactorDriverTx(twai_node_handle_t stCANBus);
 esp_err_t SetAcCurrentRx(CAN_frame_t stFrame);
 esp_err_t SetAcCurrentTx(twai_node_handle_t stCANBus);
 esp_err_t DashDataRx(CAN_frame_t stFrame);

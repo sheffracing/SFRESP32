@@ -624,6 +624,30 @@ esp_err_t CAN_read_from_buffer(void)
             //         StatusAPPSRx(stCANFrame);
             //     }
             //     break;
+            case ERPM_DUTY_VOLTAGE_ID:
+            {
+                /* Process ERPM Duty Cycle and Voltage */
+                ERPM_DUTY_VOLTAGERx(stCANFrame);
+                break;
+            }
+            case CELLSTATS1_ID:
+            {
+                /* Process BMS Cell Voltages */
+                CellStats1Rx(stCANFrame);
+                break;
+            } 
+            case STATUSAPPS_ID:
+            {
+                /* Process APPS Status */
+                StatusAPPSRx(stCANFrame);
+                break;
+            }
+            case DASHDATA_ID:
+            {
+                /* Process Dash Data */
+                DashDataRx(stCANFrame);
+                break;
+            }
             default:
                 /* Ignore other CAN frames */
                 break;

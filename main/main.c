@@ -200,9 +200,19 @@ static void GPIO_init(void)
     };
     gpio_config(&onboardLEDConfig);
 
-     ledc_channel_config(&stAIRPosChannelConfig);
-    ledc_channel_config(&stAIRNegChannelConfig);
-    ledc_channel_config(&stAIRPreChannelConfig);
+    ledc_timer_config_t stLedcTimerConfig = {
+        .speed_mode = LEDC_LOW_SPEED_MODE,
+        .duty_resolution = LEDC_TIMER_11_BIT,
+        .timer_num = LEDC_TIMER_0,
+        .freq_hz = 20000, // 20kHz
+        .clk_cfg = LEDC_AUTO_CLK,
+        .deconfigure = false,
+    };
+    ESP_ERROR_CHECK(ledc_timer_config(&stLedcTimerConfig));
+
+    ESP_ERROR_CHECK(ledc_channel_config(&stAIRPosChannelConfig));
+    ESP_ERROR_CHECK(ledc_channel_config(&stAIRNegChannelConfig));
+    ESP_ERROR_CHECK(ledc_channel_config(&stAIRPreChannelConfig));
 }
 
 void set_device_mode(eChipMode_t mode)
