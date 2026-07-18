@@ -141,16 +141,20 @@ static void main_init(void)
     /* END of SPI Devices*/
     
     /* CAN BUS */
-    eStatus = CAN_init(TRUE);
-    if (eStatus != ESP_OK)
-    {
-        ESP_LOGE(SFR_TAG, "Failed to initialise CAN: %s", esp_err_to_name(eStatus));
-    }
-    eStatus = CAN_flash_init();
-    if (eStatus != ESP_OK)
-    {
-        ESP_LOGE(SFR_TAG, "Failed to initialise CAN Reflash: %s", esp_err_to_name(eStatus));
-    }
+    // NStatus = CAN_init(TRUE);
+    // if (NStatus != ESP_OK)
+    // {
+    //     ESP_LOGE(SFR_TAG, "Failed to initialise CAN: %s", esp_err_to_name(NStatus));
+    // }
+    // NStatus = CAN_flash_init();
+    // if (NStatus != ESP_OK)
+    // {
+    //     ESP_LOGE(SFR_TAG, "Failed to initialise CAN Reflash: %s", esp_err_to_name(NStatus));
+    // }
+
+    /* LDC (SDCard and LCD share the SPI bus, take care) */
+    NVHDisplay_init();
+
 
     /* External Clock */
     // eStatus = I2C_init();

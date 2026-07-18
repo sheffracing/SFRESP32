@@ -10,7 +10,7 @@ Written by Cole Perera for Sheffield Formula Racing 2025
 #include "esp_adc/adc_cali.h"
 #include "esp_adc/adc_cali_scheme.h"
 
-#define DEVICE_ID 0xFF // UPDATE THIS FOR EACH DEVICE
+#define DEVICE_ID 0x17 // UPDATE THIS FOR EACH DEVICE
 
 #define TRUE 1
 #define FALSE 0

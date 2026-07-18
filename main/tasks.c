@@ -39,6 +39,8 @@ void task_BG(void)
     qwtTaskTimer = esp_timer_get_time();
     astTaskState[eTASK_BG] = eTASK_ACTIVE;
 
+    TFT_display();
+
     /* Service the watchdog if all task have been completed at least once */
     word wNTaskCounter = 0;
     boolean bTasksComplete = TRUE;
@@ -147,7 +149,7 @@ void task_100ms(void)
     wNCounter++;
 
     /* Check if the CAN bus is in error state and recover */
-    CAN_bus_diagnosics();
+    // CAN_bus_diagnosics();
 
     /* Update max task time */
     qwtTaskTimer = esp_timer_get_time() - qwtTaskTimer;
