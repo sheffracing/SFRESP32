@@ -39,6 +39,8 @@ void task_BG(void)
     qwtTaskTimer = esp_timer_get_time();
     astTaskState[eTASK_BG] = eTASK_ACTIVE;
 
+    TFT_display();
+    
     /* Service the watchdog if all task have been completed at least once */
     word wNTaskCounter = 0;
     boolean bTasksComplete = TRUE;
@@ -93,12 +95,12 @@ void task_1ms(void)
 /* Task that runs every 100ms. */
 void task_100ms(void)
 {
-    
     static qword qwtTaskTimer;
     static word wNCounter;
 
     qwtTaskTimer = esp_timer_get_time();
     astTaskState[eTASK_100MS] = eTASK_ACTIVE;
+    /* Display Frame */
     display_empty_buffer();
 
     /* CAN error handling */

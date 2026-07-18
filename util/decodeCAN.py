@@ -1441,3 +1441,4 @@ def identify_arrays(messages):
                 sig['array_name'] = array_name
                 sig['array_index'] = idx 
                 sig['array_size'] = array_size 
+

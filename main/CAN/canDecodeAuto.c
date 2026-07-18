@@ -4,6 +4,9 @@
 bool BRestart = 0;
 bool BClearMinMax = 0;
 bool BClearErrors = 0;
+bool BReflashMode = 0;
+bool BNormalMode = 0;
+uint8_t NTargetDeviceID = 0;
 uint8_t tLastTaskTime1msTelemCar = 0;
 uint8_t tMaxTaskTime1msTelemCar = 0;
 uint8_t tLastTaskTime100msTelemCar = 0;
@@ -111,15 +114,16 @@ float VCell[112] = {0};
 float RCell[112] = {0};
 bool BBalancingCell[112] = {0};
 float VOpenCell[112] = {0};
-uint8_t CheckSum_CellVoltages = 0;
 bool BIMDOff = 0;
-bool BIMDUndervoltage = 0;
+bool BIMDUnderVoltage = 0;
 bool BIMDStarting = 0;
 bool BIMDSSTGood = 0;
 bool BIMDDeviceError = 0;
 bool BIMDGroundConnectionFault = 0;
 bool BIMDInvalidState = 0;
 float RIsolation = 0;
+float fIMDPWM = 0;
+float rIMDPWM = 0;
 float CMD_TargetBrakeCurrent = 0;
 float CMD_TargetSpeed = 0;
 float rAPPs[2] = {0};
@@ -259,7 +263,6 @@ uint8_t NTCellMinID = 0;
 uint8_t NTempMonNumber = 0;
 int8_t TCellAvg = 0;
 uint8_t NCellTemps = 0;
-uint8_t CheckSum_BMSCellTemp = 0;
 uint32_t NTempMonJ1939Address = 0;
 uint8_t NTempMonTargetAddress = 0;
 
@@ -424,9 +427,12 @@ esp_err_t ESPControlRx(CAN_frame_t stFrame)
     tSinceESPControl = 0;
 
     /* Standard Signals */
-    BRestart = (bool)((float)(((stFrame.abData[0] >> 7) & 0x1)));
-    BClearMinMax = (bool)((float)(((stFrame.abData[0] >> 6) & 0x1)));
-    BClearErrors = (bool)((float)(((stFrame.abData[0] >> 5) & 0x1)));
+    BRestart = (bool)(((stFrame.abData[0] >> 7) & 0x1));
+    BClearMinMax = (bool)(((stFrame.abData[0] >> 6) & 0x1));
+    BClearErrors = (bool)(((stFrame.abData[0] >> 5) & 0x1));
+    BReflashMode = (bool)(((stFrame.abData[0] >> 4) & 0x1));
+    BNormalMode = (bool)(((stFrame.abData[0] >> 3) & 0x1));
+    NTargetDeviceID = (uint8_t)(((stFrame.abData[1] >> 0) & 0xFF));
     return ESP_OK;
 }
 
@@ -532,7 +538,7 @@ esp_err_t MCUStatusTelemCarTx(twai_node_handle_t stCANBus)
     stFrame.abData[5] |= (uint8_t)(((((uint32_t)(((float)tMaxTaskTimeBGTelemCar) / 500.0f) & 0xFF) >> 0) & 0xFF) << 0);
     stFrame.abData[6] |= (uint8_t)(((((uint32_t)(((float)tSincePowerUpTelemCar) / 4.0f) & 0xFFF) >> 4) & 0xFF) << 0);
     stFrame.abData[7] |= (uint8_t)(((((uint32_t)(((float)tSincePowerUpTelemCar) / 4.0f) & 0xFFF) >> 0) & 0xF) << 4);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((float)NLastResetReasonTelemCar) & 0xF) >> 0) & 0xF) << 0);
+    stFrame.abData[7] |= (uint8_t)(((((uint32_t)NLastResetReasonTelemCar & 0xF) >> 0) & 0xF) << 0);
 
     return CAN_transmit(stCANBus, &stFrame);
 }
@@ -541,8 +547,6 @@ esp_err_t MCUStatusTelemPitsRx(CAN_frame_t stFrame)
 {
     /*
     *===========================================================================
-    *   MCUStatusTelemPitsRx
-    *   MCUStatusTelemPitsRx
     *   MCUStatusTelemPitsRx
     *   Message: MCUStatusTelemPits (0x12)
     *   Description: MCU Status Message
@@ -615,7 +619,7 @@ esp_err_t MCUStatusTelemPitsTx(twai_node_handle_t stCANBus)
     stFrame.abData[5] |= (uint8_t)(((((uint32_t)(((float)tMaxTaskTimeBGTelemPits) / 500.0f) & 0xFF) >> 0) & 0xFF) << 0);
     stFrame.abData[6] |= (uint8_t)(((((uint32_t)(((float)tSincePowerUpTelemPits) / 4.0f) & 0xFFF) >> 4) & 0xFF) << 0);
     stFrame.abData[7] |= (uint8_t)(((((uint32_t)(((float)tSincePowerUpTelemPits) / 4.0f) & 0xFFF) >> 0) & 0xF) << 4);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((float)NLastResetReasonTelemPits) & 0xF) >> 0) & 0xF) << 0);
+    stFrame.abData[7] |= (uint8_t)(((((uint32_t)NLastResetReasonTelemPits & 0xF) >> 0) & 0xF) << 0);
 
     return CAN_transmit(stCANBus, &stFrame);
 }
@@ -624,8 +628,6 @@ esp_err_t MCUStatusIMDMonitorRx(CAN_frame_t stFrame)
 {
     /*
     *===========================================================================
-    *   MCUStatusIMDMonitorRx
-    *   MCUStatusIMDMonitorRx
     *   MCUStatusIMDMonitorRx
     *   Message: MCUStatusIMDMonitor (0x13)
     *   Description: MCU Status Message
@@ -698,7 +700,7 @@ esp_err_t MCUStatusIMDMonitorTx(twai_node_handle_t stCANBus)
     stFrame.abData[5] |= (uint8_t)(((((uint32_t)(((float)tMaxTaskTimeBGIMDMon) / 500.0f) & 0xFF) >> 0) & 0xFF) << 0);
     stFrame.abData[6] |= (uint8_t)(((((uint32_t)(((float)tSincePowerUpIMDMon) / 4.0f) & 0xFFF) >> 4) & 0xFF) << 0);
     stFrame.abData[7] |= (uint8_t)(((((uint32_t)(((float)tSincePowerUpIMDMon) / 4.0f) & 0xFFF) >> 0) & 0xF) << 4);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((float)NLastResetReasonIMDMon) & 0xF) >> 0) & 0xF) << 0);
+    stFrame.abData[7] |= (uint8_t)(((((uint32_t)NLastResetReasonIMDMon & 0xF) >> 0) & 0xF) << 0);
 
     return CAN_transmit(stCANBus, &stFrame);
 }
@@ -707,8 +709,6 @@ esp_err_t MCUStatusLoggerRx(CAN_frame_t stFrame)
 {
     /*
     *===========================================================================
-    *   MCUStatusLoggerRx
-    *   MCUStatusLoggerRx
     *   MCUStatusLoggerRx
     *   Message: MCUStatusLogger (0x14)
     *   Description: MCU Status Message (Not sent to BUS just logged to SD card directly)
@@ -781,7 +781,7 @@ esp_err_t MCUStatusLoggerTx(twai_node_handle_t stCANBus)
     stFrame.abData[5] |= (uint8_t)(((((uint32_t)(((float)tMaxTaskTimeBGLogger) / 500.0f) & 0xFF) >> 0) & 0xFF) << 0);
     stFrame.abData[6] |= (uint8_t)(((((uint32_t)(((float)tSincePowerUpLogger) / 4.0f) & 0xFFF) >> 4) & 0xFF) << 0);
     stFrame.abData[7] |= (uint8_t)(((((uint32_t)(((float)tSincePowerUpLogger) / 4.0f) & 0xFFF) >> 0) & 0xF) << 4);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((float)NLastResetReasonLogger) & 0xF) >> 0) & 0xF) << 0);
+    stFrame.abData[7] |= (uint8_t)(((((uint32_t)NLastResetReasonLogger & 0xF) >> 0) & 0xF) << 0);
 
     return CAN_transmit(stCANBus, &stFrame);
 }
@@ -790,8 +790,6 @@ esp_err_t MCUStatusPDURx(CAN_frame_t stFrame)
 {
     /*
     *===========================================================================
-    *   MCUStatusPDURx
-    *   MCUStatusPDURx
     *   MCUStatusPDURx
     *   Message: MCUStatusPDU (0x15)
     *   Description: MCU Status Message
@@ -864,7 +862,7 @@ esp_err_t MCUStatusPDUTx(twai_node_handle_t stCANBus)
     stFrame.abData[5] |= (uint8_t)(((((uint32_t)(((float)tMaxTaskTimeBGPDU) / 500.0f) & 0xFF) >> 0) & 0xFF) << 0);
     stFrame.abData[6] |= (uint8_t)(((((uint32_t)(((float)tSincePowerUpPDU) / 4.0f) & 0xFFF) >> 4) & 0xFF) << 0);
     stFrame.abData[7] |= (uint8_t)(((((uint32_t)(((float)tSincePowerUpPDU) / 4.0f) & 0xFFF) >> 0) & 0xF) << 4);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((float)NLastResetReasonPDU) & 0xF) >> 0) & 0xF) << 0);
+    stFrame.abData[7] |= (uint8_t)(((((uint32_t)NLastResetReasonPDU & 0xF) >> 0) & 0xF) << 0);
 
     return CAN_transmit(stCANBus, &stFrame);
 }
@@ -873,8 +871,6 @@ esp_err_t StatusAPPSRx(CAN_frame_t stFrame)
 {
     /*
     *===========================================================================
-    *   StatusAPPSRx
-    *   StatusAPPSRx
     *   StatusAPPSRx
     *   Message: StatusAPPS (0x16)
     *   Description: MCU Status Message
@@ -947,7 +943,7 @@ esp_err_t StatusAPPSTx(twai_node_handle_t stCANBus)
     stFrame.abData[5] |= (uint8_t)(((((uint32_t)(((float)tMaxTaskTimeBGAPPS) / 500.0f) & 0xFF) >> 0) & 0xFF) << 0);
     stFrame.abData[6] |= (uint8_t)(((((uint32_t)(((float)tSincePowerUpAPPS) / 4.0f) & 0xFFF) >> 4) & 0xFF) << 0);
     stFrame.abData[7] |= (uint8_t)(((((uint32_t)(((float)tSincePowerUpAPPS) / 4.0f) & 0xFFF) >> 0) & 0xF) << 4);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((float)NLastResetReasonAPPS) & 0xF) >> 0) & 0xF) << 0);
+    stFrame.abData[7] |= (uint8_t)(((((uint32_t)NLastResetReasonAPPS & 0xF) >> 0) & 0xF) << 0);
 
     return CAN_transmit(stCANBus, &stFrame);
 }
@@ -956,8 +952,6 @@ esp_err_t MCUStatusScreenRx(CAN_frame_t stFrame)
 {
     /*
     *===========================================================================
-    *   MCUStatusScreenRx
-    *   MCUStatusScreenRx
     *   MCUStatusScreenRx
     *   Message: MCUStatusScreen (0x17)
     *   Description: MCU Status Message
@@ -1030,7 +1024,7 @@ esp_err_t MCUStatusScreenTx(twai_node_handle_t stCANBus)
     stFrame.abData[5] |= (uint8_t)(((((uint32_t)(((float)tMaxTaskTimeBGScreen) / 500.0f) & 0xFF) >> 0) & 0xFF) << 0);
     stFrame.abData[6] |= (uint8_t)(((((uint32_t)(((float)tSincePowerUpScreen) / 4.0f) & 0xFFF) >> 4) & 0xFF) << 0);
     stFrame.abData[7] |= (uint8_t)(((((uint32_t)(((float)tSincePowerUpScreen) / 4.0f) & 0xFFF) >> 0) & 0xF) << 4);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((float)NLastResetReasonScreen) & 0xF) >> 0) & 0xF) << 0);
+    stFrame.abData[7] |= (uint8_t)(((((uint32_t)NLastResetReasonScreen & 0xF) >> 0) & 0xF) << 0);
 
     return CAN_transmit(stCANBus, &stFrame);
 }
@@ -1039,8 +1033,6 @@ esp_err_t MCUStatusDashRx(CAN_frame_t stFrame)
 {
     /*
     *===========================================================================
-    *   MCUStatusDashRx
-    *   MCUStatusDashRx
     *   MCUStatusDashRx
     *   Message: MCUStatusDash (0x18)
     *   Description: MCU Status Message
@@ -1179,8 +1171,6 @@ esp_err_t MCUStatusTempMonRx(CAN_frame_t stFrame)
     return ESP_OK;
 }
 
-esp_err_t MCUStatusTempMonTx(twai_node_handle_t stCANBus)
-esp_err_t MCUStatusTempMonTx(twai_node_handle_t stCANBus)
 esp_err_t MCUStatusTempMonTx(twai_node_handle_t stCANBus)
 {
     /*
@@ -1423,19 +1413,18 @@ esp_err_t ContactorDriverDataTx(twai_node_handle_t stCANBus)
     return CAN_transmit(stCANBus, &stFrame);
 }
 
-esp_err_t CellVoltagesRx(CAN_frame_t stFrame)
+esp_err_t DashDataRx(CAN_frame_t stFrame)
 {
     /*
     *===========================================================================
-    *   CellVoltagesRx
-    *   Message: CellVoltages (0x36)
-    *   Description: All Cell Voltages
+    *   DashDataRx
+    *   Message: DashData (0x33)
     *   Takes:   stFrame: The CAN frame to decode
     *   Returns: ESP_OK if successful, error code if not.
     *   Autogenerated by decodeCAN.py
     */
     if (stFrame.byDLC != 8) return ESP_ERR_INVALID_SIZE;
-    if (stFrame.dwID != 0x36) return ESP_ERR_INVALID_ARG;
+    if (stFrame.dwID != 0x33) return ESP_ERR_INVALID_ARG;
 
     tSinceCellVoltages = 0;
 
@@ -1454,19 +1443,19 @@ esp_err_t CellVoltagesRx(CAN_frame_t stFrame)
     return ESP_OK;
 }
 
-esp_err_t CellVoltagesTx(twai_node_handle_t stCANBus)
+esp_err_t DashDataTx(twai_node_handle_t stCANBus)
 {
     /*
     *===========================================================================
-    *   CellVoltagesTx
-    *   Encodes and Transmits Message: CellVoltages (0x36)
+    *   DashDataTx
+    *   Encodes and Transmits Message: DashData (0x33)
     *   Uses global signal variables.
     *   Takes:   stCANBus: Handle to CAN bus to transmit on
     *   Returns: ESP_OK if successful, error code if not.
     *   Autogenerated by decodeCAN.py
     */
     CAN_frame_t stFrame;
-    stFrame.dwID = 0x36;
+    stFrame.dwID = 0x33;
     stFrame.byDLC = 8;
     memset(stFrame.abData, 0, 8);
 
@@ -1589,6 +1578,8 @@ esp_err_t IMDDataRx(CAN_frame_t stFrame)
     BIMDGroundConnectionFault = (bool)(((stFrame.abData[0] >> 2) & 0x1));
     BIMDInvalidState = (bool)(((stFrame.abData[0] >> 1) & 0x1));
     RIsolation = (float)((float)((((uint16_t)((stFrame.abData[1] >> 0) & 0xFF)) << 8) | ((uint16_t)((stFrame.abData[2] >> 0) & 0xFF))) * 200.0f);
+    fIMDPWM = (float)((float)(((stFrame.abData[3] >> 0) & 0xFF)));
+    rIMDPWM = (float)((float)(((stFrame.abData[4] >> 0) & 0xFF)));
     return ESP_OK;
 }
 
@@ -1731,10 +1722,10 @@ esp_err_t StatusAPPSSensorRx(CAN_frame_t stFrame)
     rAPPs[0] = (float)((float)(((stFrame.abData[0] >> 0) & 0xFF)));
     rAPPs[1] = (float)((float)(((stFrame.abData[1] >> 0) & 0xFF)));
     rAPPsFinal = (float)((float)(((stFrame.abData[2] >> 0) & 0xFF)));
-    BThrottleOK = (bool)((float)(((stFrame.abData[3] >> 3) & 0x1)));
-    BAPPSFail[0] = (bool)((float)(((stFrame.abData[3] >> 2) & 0x1)));
-    BAPPSFail[1] = (bool)((float)(((stFrame.abData[3] >> 1) & 0x1)));
-    BAPPSDrift = (bool)((float)(((stFrame.abData[3] >> 0) & 0x1)));
+    BThrottleOK = (bool)(((stFrame.abData[3] >> 3) & 0x1));
+    BAPPSFail[0] = (bool)(((stFrame.abData[3] >> 2) & 0x1));
+    BAPPSFail[1] = (bool)(((stFrame.abData[3] >> 1) & 0x1));
+    BAPPSDrift = (bool)(((stFrame.abData[3] >> 0) & 0x1));
     return ESP_OK;
 }
 
@@ -2325,10 +2316,10 @@ esp_err_t SetDigOutputRx(CAN_frame_t stFrame)
     tSinceSetDigOutput = 0;
 
     /* Standard Signals */
-    CMD_SetDigOutput[3] = (bool)((float)(((stFrame.abData[0] >> 3) & 0x1)));
-    CMD_SetDigOutput[2] = (bool)((float)(((stFrame.abData[0] >> 2) & 0x1)));
-    CMD_SetDigOutput[1] = (bool)((float)(((stFrame.abData[0] >> 1) & 0x1)));
-    CMD_SetDigOutput[0] = (bool)((float)(((stFrame.abData[0] >> 0) & 0x1)));
+    CMD_SetDigOutput[3] = (bool)(((stFrame.abData[0] >> 3) & 0x1));
+    CMD_SetDigOutput[2] = (bool)(((stFrame.abData[0] >> 2) & 0x1));
+    CMD_SetDigOutput[1] = (bool)(((stFrame.abData[0] >> 1) & 0x1));
+    CMD_SetDigOutput[0] = (bool)(((stFrame.abData[0] >> 0) & 0x1));
     return ESP_OK;
 }
 
@@ -2550,8 +2541,6 @@ esp_err_t SetDriveEnableRx(CAN_frame_t stFrame)
 }
 
 esp_err_t SetDriveEnableTx(twai_node_handle_t stCANBus)
-esp_err_t SetDriveEnableTx(twai_node_handle_t stCANBus)
-esp_err_t SetDriveEnableTx(twai_node_handle_t stCANBus)
 {
     /*
     *===========================================================================
@@ -2567,7 +2556,7 @@ esp_err_t SetDriveEnableTx(twai_node_handle_t stCANBus)
     stFrame.byDLC = 8;
     memset(stFrame.abData, 0, 8);
 
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((float)CMD_DriveEnable) & 0xFF) >> 0) & 0xFF) << 0);
+    stFrame.abData[0] |= (uint8_t)(((((uint32_t)CMD_DriveEnable & 0xFF) >> 0) & 0xFF) << 0);
 
     return CAN_transmit(stCANBus, &stFrame);
 }
@@ -2625,69 +2614,9 @@ esp_err_t FRTireTemp1Tx(twai_node_handle_t stCANBus)
 }
 
 esp_err_t FRTireTemp2Rx(CAN_frame_t stFrame)
-esp_err_t FRTireTemp1Tx(twai_node_handle_t stCANBus)
 {
     /*
     *===========================================================================
-    *   FRTireTemp1Tx
-    *   Encodes and Transmits Message: FRTireTemp1 (0x200)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x200;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[0]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[0]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[1]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[1]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[2]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[2]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[3]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[3]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t FRTireTemp2Rx(CAN_frame_t stFrame)
-esp_err_t FRTireTemp1Tx(twai_node_handle_t stCANBus)
-{
-    /*
-    *===========================================================================
-    *   FRTireTemp1Tx
-    *   Encodes and Transmits Message: FRTireTemp1 (0x200)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x200;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[0]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[0]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[1]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[1]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[2]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[2]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[3]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[3]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t FRTireTemp2Rx(CAN_frame_t stFrame)
-{
-    /*
-    *===========================================================================
-    *   FRTireTemp2Rx
-    *   FRTireTemp2Rx
     *   FRTireTemp2Rx
     *   Message: FRTireTemp2 (0x201)
     *   Description: Front Right Tire temperature sensor channels 5-8
@@ -2737,69 +2666,9 @@ esp_err_t FRTireTemp2Tx(twai_node_handle_t stCANBus)
 }
 
 esp_err_t FRTireTemp3Rx(CAN_frame_t stFrame)
-esp_err_t FRTireTemp2Tx(twai_node_handle_t stCANBus)
 {
     /*
     *===========================================================================
-    *   FRTireTemp2Tx
-    *   Encodes and Transmits Message: FRTireTemp2 (0x201)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x201;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[4]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[4]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[5]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[5]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[6]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[6]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[7]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[7]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t FRTireTemp3Rx(CAN_frame_t stFrame)
-esp_err_t FRTireTemp2Tx(twai_node_handle_t stCANBus)
-{
-    /*
-    *===========================================================================
-    *   FRTireTemp2Tx
-    *   Encodes and Transmits Message: FRTireTemp2 (0x201)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x201;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[4]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[4]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[5]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[5]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[6]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[6]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[7]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[7]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t FRTireTemp3Rx(CAN_frame_t stFrame)
-{
-    /*
-    *===========================================================================
-    *   FRTireTemp3Rx
-    *   FRTireTemp3Rx
     *   FRTireTemp3Rx
     *   Message: FRTireTemp3 (0x202)
     *   Description: Front Right Tire temperature sensor channels 9-12
@@ -2849,69 +2718,9 @@ esp_err_t FRTireTemp3Tx(twai_node_handle_t stCANBus)
 }
 
 esp_err_t FRTireTemp4Rx(CAN_frame_t stFrame)
-esp_err_t FRTireTemp3Tx(twai_node_handle_t stCANBus)
 {
     /*
     *===========================================================================
-    *   FRTireTemp3Tx
-    *   Encodes and Transmits Message: FRTireTemp3 (0x202)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x202;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[8]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[8]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[9]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[9]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[10]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[10]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[11]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[11]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t FRTireTemp4Rx(CAN_frame_t stFrame)
-esp_err_t FRTireTemp3Tx(twai_node_handle_t stCANBus)
-{
-    /*
-    *===========================================================================
-    *   FRTireTemp3Tx
-    *   Encodes and Transmits Message: FRTireTemp3 (0x202)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x202;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[8]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[8]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[9]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[9]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[10]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[10]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[11]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[11]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t FRTireTemp4Rx(CAN_frame_t stFrame)
-{
-    /*
-    *===========================================================================
-    *   FRTireTemp4Rx
-    *   FRTireTemp4Rx
     *   FRTireTemp4Rx
     *   Message: FRTireTemp4 (0x203)
     *   Description: Front Right Tire temperature sensor channels 13-16
@@ -2961,69 +2770,9 @@ esp_err_t FRTireTemp4Tx(twai_node_handle_t stCANBus)
 }
 
 esp_err_t FLTireTemp1Rx(CAN_frame_t stFrame)
-esp_err_t FRTireTemp4Tx(twai_node_handle_t stCANBus)
 {
     /*
     *===========================================================================
-    *   FRTireTemp4Tx
-    *   Encodes and Transmits Message: FRTireTemp4 (0x203)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x203;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[12]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[12]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[13]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[13]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[14]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[14]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[15]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[15]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t FLTireTemp1Rx(CAN_frame_t stFrame)
-esp_err_t FRTireTemp4Tx(twai_node_handle_t stCANBus)
-{
-    /*
-    *===========================================================================
-    *   FRTireTemp4Tx
-    *   Encodes and Transmits Message: FRTireTemp4 (0x203)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x203;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[12]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[12]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[13]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[13]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[14]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[14]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[15]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TFRTireChannel[15]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t FLTireTemp1Rx(CAN_frame_t stFrame)
-{
-    /*
-    *===========================================================================
-    *   FLTireTemp1Rx
-    *   FLTireTemp1Rx
     *   FLTireTemp1Rx
     *   Message: FLTireTemp1 (0x204)
     *   Description: Front Left Tire temperature sensor channels 1-4
@@ -3073,69 +2822,9 @@ esp_err_t FLTireTemp1Tx(twai_node_handle_t stCANBus)
 }
 
 esp_err_t FLTireTemp2Rx(CAN_frame_t stFrame)
-esp_err_t FLTireTemp1Tx(twai_node_handle_t stCANBus)
 {
     /*
     *===========================================================================
-    *   FLTireTemp1Tx
-    *   Encodes and Transmits Message: FLTireTemp1 (0x204)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x204;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[0]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[0]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[1]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[1]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[2]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[2]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[3]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[3]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t FLTireTemp2Rx(CAN_frame_t stFrame)
-esp_err_t FLTireTemp1Tx(twai_node_handle_t stCANBus)
-{
-    /*
-    *===========================================================================
-    *   FLTireTemp1Tx
-    *   Encodes and Transmits Message: FLTireTemp1 (0x204)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x204;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[0]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[0]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[1]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[1]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[2]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[2]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[3]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[3]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t FLTireTemp2Rx(CAN_frame_t stFrame)
-{
-    /*
-    *===========================================================================
-    *   FLTireTemp2Rx
-    *   FLTireTemp2Rx
     *   FLTireTemp2Rx
     *   Message: FLTireTemp2 (0x205)
     *   Description: Front Left Tire temperature sensor channels 5-8
@@ -3185,69 +2874,9 @@ esp_err_t FLTireTemp2Tx(twai_node_handle_t stCANBus)
 }
 
 esp_err_t FLTireTemp3Rx(CAN_frame_t stFrame)
-esp_err_t FLTireTemp2Tx(twai_node_handle_t stCANBus)
 {
     /*
     *===========================================================================
-    *   FLTireTemp2Tx
-    *   Encodes and Transmits Message: FLTireTemp2 (0x205)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x205;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[4]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[4]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[5]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[5]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[6]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[6]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[7]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[7]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t FLTireTemp3Rx(CAN_frame_t stFrame)
-esp_err_t FLTireTemp2Tx(twai_node_handle_t stCANBus)
-{
-    /*
-    *===========================================================================
-    *   FLTireTemp2Tx
-    *   Encodes and Transmits Message: FLTireTemp2 (0x205)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x205;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[4]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[4]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[5]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[5]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[6]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[6]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[7]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[7]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t FLTireTemp3Rx(CAN_frame_t stFrame)
-{
-    /*
-    *===========================================================================
-    *   FLTireTemp3Rx
-    *   FLTireTemp3Rx
     *   FLTireTemp3Rx
     *   Message: FLTireTemp3 (0x206)
     *   Description: Front Left Tire temperature sensor channels 9-12
@@ -3297,69 +2926,9 @@ esp_err_t FLTireTemp3Tx(twai_node_handle_t stCANBus)
 }
 
 esp_err_t FLTireTemp4Rx(CAN_frame_t stFrame)
-esp_err_t FLTireTemp3Tx(twai_node_handle_t stCANBus)
 {
     /*
     *===========================================================================
-    *   FLTireTemp3Tx
-    *   Encodes and Transmits Message: FLTireTemp3 (0x206)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x206;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[8]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[8]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[9]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[9]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[10]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[10]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[11]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[11]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t FLTireTemp4Rx(CAN_frame_t stFrame)
-esp_err_t FLTireTemp3Tx(twai_node_handle_t stCANBus)
-{
-    /*
-    *===========================================================================
-    *   FLTireTemp3Tx
-    *   Encodes and Transmits Message: FLTireTemp3 (0x206)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x206;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[8]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[8]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[9]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[9]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[10]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[10]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[11]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[11]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t FLTireTemp4Rx(CAN_frame_t stFrame)
-{
-    /*
-    *===========================================================================
-    *   FLTireTemp4Rx
-    *   FLTireTemp4Rx
     *   FLTireTemp4Rx
     *   Message: FLTireTemp4 (0x207)
     *   Description: Front Left Tire temperature sensor channels 13-16
@@ -3409,69 +2978,9 @@ esp_err_t FLTireTemp4Tx(twai_node_handle_t stCANBus)
 }
 
 esp_err_t RRTireTemp1Rx(CAN_frame_t stFrame)
-esp_err_t FLTireTemp4Tx(twai_node_handle_t stCANBus)
 {
     /*
     *===========================================================================
-    *   FLTireTemp4Tx
-    *   Encodes and Transmits Message: FLTireTemp4 (0x207)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x207;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[12]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[12]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[13]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[13]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[14]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[14]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[15]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[15]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t RRTireTemp1Rx(CAN_frame_t stFrame)
-esp_err_t FLTireTemp4Tx(twai_node_handle_t stCANBus)
-{
-    /*
-    *===========================================================================
-    *   FLTireTemp4Tx
-    *   Encodes and Transmits Message: FLTireTemp4 (0x207)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x207;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[12]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[12]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[13]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[13]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[14]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[14]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[15]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TFLTireChannel[15]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t RRTireTemp1Rx(CAN_frame_t stFrame)
-{
-    /*
-    *===========================================================================
-    *   RRTireTemp1Rx
-    *   RRTireTemp1Rx
     *   RRTireTemp1Rx
     *   Message: RRTireTemp1 (0x208)
     *   Description: Rear Right Tire temperature sensor channels 1-4
@@ -3521,69 +3030,9 @@ esp_err_t RRTireTemp1Tx(twai_node_handle_t stCANBus)
 }
 
 esp_err_t RRTireTemp2Rx(CAN_frame_t stFrame)
-esp_err_t RRTireTemp1Tx(twai_node_handle_t stCANBus)
 {
     /*
     *===========================================================================
-    *   RRTireTemp1Tx
-    *   Encodes and Transmits Message: RRTireTemp1 (0x208)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x208;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[0]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[0]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[1]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[1]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[2]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[2]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[3]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[3]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t RRTireTemp2Rx(CAN_frame_t stFrame)
-esp_err_t RRTireTemp1Tx(twai_node_handle_t stCANBus)
-{
-    /*
-    *===========================================================================
-    *   RRTireTemp1Tx
-    *   Encodes and Transmits Message: RRTireTemp1 (0x208)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x208;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[0]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[0]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[1]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[1]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[2]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[2]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[3]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[3]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t RRTireTemp2Rx(CAN_frame_t stFrame)
-{
-    /*
-    *===========================================================================
-    *   RRTireTemp2Rx
-    *   RRTireTemp2Rx
     *   RRTireTemp2Rx
     *   Message: RRTireTemp2 (0x209)
     *   Description: Rear Right Tire temperature sensor channels 5-8
@@ -3633,69 +3082,9 @@ esp_err_t RRTireTemp2Tx(twai_node_handle_t stCANBus)
 }
 
 esp_err_t RRTireTemp3Rx(CAN_frame_t stFrame)
-esp_err_t RRTireTemp2Tx(twai_node_handle_t stCANBus)
 {
     /*
     *===========================================================================
-    *   RRTireTemp2Tx
-    *   Encodes and Transmits Message: RRTireTemp2 (0x209)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x209;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[4]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[4]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[5]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[5]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[6]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[6]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[7]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[7]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t RRTireTemp3Rx(CAN_frame_t stFrame)
-esp_err_t RRTireTemp2Tx(twai_node_handle_t stCANBus)
-{
-    /*
-    *===========================================================================
-    *   RRTireTemp2Tx
-    *   Encodes and Transmits Message: RRTireTemp2 (0x209)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x209;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[4]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[4]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[5]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[5]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[6]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[6]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[7]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[7]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t RRTireTemp3Rx(CAN_frame_t stFrame)
-{
-    /*
-    *===========================================================================
-    *   RRTireTemp3Rx
-    *   RRTireTemp3Rx
     *   RRTireTemp3Rx
     *   Message: RRTireTemp3 (0x20A)
     *   Description: Rear Right Tire temperature sensor channels 9-12
@@ -3745,69 +3134,9 @@ esp_err_t RRTireTemp3Tx(twai_node_handle_t stCANBus)
 }
 
 esp_err_t RRTireTemp4Rx(CAN_frame_t stFrame)
-esp_err_t RRTireTemp3Tx(twai_node_handle_t stCANBus)
 {
     /*
     *===========================================================================
-    *   RRTireTemp3Tx
-    *   Encodes and Transmits Message: RRTireTemp3 (0x20A)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x20A;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[8]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[8]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[9]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[9]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[10]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[10]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[11]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[11]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t RRTireTemp4Rx(CAN_frame_t stFrame)
-esp_err_t RRTireTemp3Tx(twai_node_handle_t stCANBus)
-{
-    /*
-    *===========================================================================
-    *   RRTireTemp3Tx
-    *   Encodes and Transmits Message: RRTireTemp3 (0x20A)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x20A;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[8]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[8]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[9]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[9]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[10]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[10]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[11]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[11]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t RRTireTemp4Rx(CAN_frame_t stFrame)
-{
-    /*
-    *===========================================================================
-    *   RRTireTemp4Rx
-    *   RRTireTemp4Rx
     *   RRTireTemp4Rx
     *   Message: RRTireTemp4 (0x20B)
     *   Description: Rear Right Tire temperature sensor channels 13-16
@@ -3857,69 +3186,9 @@ esp_err_t RRTireTemp4Tx(twai_node_handle_t stCANBus)
 }
 
 esp_err_t RLTireTemp1Rx(CAN_frame_t stFrame)
-esp_err_t RRTireTemp4Tx(twai_node_handle_t stCANBus)
 {
     /*
     *===========================================================================
-    *   RRTireTemp4Tx
-    *   Encodes and Transmits Message: RRTireTemp4 (0x20B)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x20B;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[12]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[12]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[13]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[13]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[14]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[14]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[15]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[15]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t RLTireTemp1Rx(CAN_frame_t stFrame)
-esp_err_t RRTireTemp4Tx(twai_node_handle_t stCANBus)
-{
-    /*
-    *===========================================================================
-    *   RRTireTemp4Tx
-    *   Encodes and Transmits Message: RRTireTemp4 (0x20B)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x20B;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[12]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[12]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[13]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[13]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[14]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[14]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[15]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TRRTireChannel[15]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t RLTireTemp1Rx(CAN_frame_t stFrame)
-{
-    /*
-    *===========================================================================
-    *   RLTireTemp1Rx
-    *   RLTireTemp1Rx
     *   RLTireTemp1Rx
     *   Message: RLTireTemp1 (0x20C)
     *   Description: Rear Left Tire temperature sensor channels 1-4
@@ -3969,69 +3238,9 @@ esp_err_t RLTireTemp1Tx(twai_node_handle_t stCANBus)
 }
 
 esp_err_t RLTireTemp2Rx(CAN_frame_t stFrame)
-esp_err_t RLTireTemp1Tx(twai_node_handle_t stCANBus)
 {
     /*
     *===========================================================================
-    *   RLTireTemp1Tx
-    *   Encodes and Transmits Message: RLTireTemp1 (0x20C)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x20C;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[0]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[0]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[1]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[1]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[2]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[2]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[3]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[3]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t RLTireTemp2Rx(CAN_frame_t stFrame)
-esp_err_t RLTireTemp1Tx(twai_node_handle_t stCANBus)
-{
-    /*
-    *===========================================================================
-    *   RLTireTemp1Tx
-    *   Encodes and Transmits Message: RLTireTemp1 (0x20C)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x20C;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[0]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[0]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[1]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[1]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[2]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[2]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[3]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[3]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t RLTireTemp2Rx(CAN_frame_t stFrame)
-{
-    /*
-    *===========================================================================
-    *   RLTireTemp2Rx
-    *   RLTireTemp2Rx
     *   RLTireTemp2Rx
     *   Message: RLTireTemp2 (0x20D)
     *   Description: Rear Left Tire temperature sensor channels 5-8
@@ -4081,69 +3290,9 @@ esp_err_t RLTireTemp2Tx(twai_node_handle_t stCANBus)
 }
 
 esp_err_t RLTireTemp3Rx(CAN_frame_t stFrame)
-esp_err_t RLTireTemp2Tx(twai_node_handle_t stCANBus)
 {
     /*
     *===========================================================================
-    *   RLTireTemp2Tx
-    *   Encodes and Transmits Message: RLTireTemp2 (0x20D)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x20D;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[4]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[4]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[5]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[5]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[6]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[6]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[7]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[7]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t RLTireTemp3Rx(CAN_frame_t stFrame)
-esp_err_t RLTireTemp2Tx(twai_node_handle_t stCANBus)
-{
-    /*
-    *===========================================================================
-    *   RLTireTemp2Tx
-    *   Encodes and Transmits Message: RLTireTemp2 (0x20D)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x20D;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[4]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[4]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[5]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[5]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[6]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[6]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[7]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[7]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t RLTireTemp3Rx(CAN_frame_t stFrame)
-{
-    /*
-    *===========================================================================
-    *   RLTireTemp3Rx
-    *   RLTireTemp3Rx
     *   RLTireTemp3Rx
     *   Message: RLTireTemp3 (0x20E)
     *   Description: Rear Left Tire temperature sensor channels 9-12
@@ -4193,69 +3342,9 @@ esp_err_t RLTireTemp3Tx(twai_node_handle_t stCANBus)
 }
 
 esp_err_t RLTireTemp4Rx(CAN_frame_t stFrame)
-esp_err_t RLTireTemp3Tx(twai_node_handle_t stCANBus)
 {
     /*
     *===========================================================================
-    *   RLTireTemp3Tx
-    *   Encodes and Transmits Message: RLTireTemp3 (0x20E)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x20E;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[8]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[8]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[9]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[9]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[10]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[10]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[11]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[11]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t RLTireTemp4Rx(CAN_frame_t stFrame)
-esp_err_t RLTireTemp3Tx(twai_node_handle_t stCANBus)
-{
-    /*
-    *===========================================================================
-    *   RLTireTemp3Tx
-    *   Encodes and Transmits Message: RLTireTemp3 (0x20E)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x20E;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[8]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[1] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[8]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[2] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[9]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[3] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[9]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[4] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[10]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[5] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[10]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    stFrame.abData[6] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[11]) - -100.0f) / 0.1f) & 0xFFFF) >> 8) & 0xFF) << 0);
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((((float)TRLTireChannel[11]) - -100.0f) / 0.1f) & 0xFFFF) >> 0) & 0xFF) << 0);
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t RLTireTemp4Rx(CAN_frame_t stFrame)
-{
-    /*
-    *===========================================================================
-    *   RLTireTemp4Rx
-    *   RLTireTemp4Rx
     *   RLTireTemp4Rx
     *   Message: RLTireTemp4 (0x20F)
     *   Description: Rear Left Tire temperature sensor channels 13-16
