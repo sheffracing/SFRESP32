@@ -1,11 +1,12 @@
 #ifndef SFRCAN
-#define SFRCAN
+#include "main.h"
 
-#include "./../main.h"
-#include "./../pin.h"
-#include "./../espnow.h"
-#include "canDecodeAuto.h"
+#include "esp_twai.h"
+#include "esp_twai_onchip.h"
 
+#include "pin.h"
+#include "string.h"
+#include "espnow.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "string.h"
@@ -33,8 +34,6 @@ void CAN_CMD_response(twai_frame_t stRxFrame);
 void CAN_clear_rx_buffer(void);
 
 #define KILL_MSG_ID 0x001
-
-extern QueueHandle_t xCANRingBuffer;
 
 #ifdef GPIO_CAN0_TX
 extern twai_node_handle_t stCANBus0;
