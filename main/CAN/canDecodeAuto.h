@@ -635,7 +635,6 @@ extern bool BTempMonAddressCastInError;
 #define TEMPMONADDRESSCAST_PERIOD_MS 200
 #define TEMPMONADDRESSCAST_THRESH_MS 1000
 
-<<<<<<< HEAD
 esp_err_t ESPControlRx(CAN_frame_t stFrame);
 esp_err_t ESPControlTx(twai_node_handle_t stCANBus);
 esp_err_t MCUStatusTelemCarRx(CAN_frame_t stFrame);

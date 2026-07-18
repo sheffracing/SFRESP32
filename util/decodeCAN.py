@@ -354,17 +354,33 @@ def main():
                 continue
             
             sname = str(sname).strip()
-<<<<<<< HEAD
             
             # Filter reserved/spare signals
             if any(x in sname.lower() for x in ['reserved', 'spare', 'padding', 'unused']):
                 continue
 
-=======
->>>>>>> 9105219 (CAN message decode script)
-            # Clean variable names (remove illegal chars)
-            sname = re.sub(r'[^a-zA-Z0-9_]', '', sname)
+            # Check for constant signal (Hex name like 0xF5)
+            is_constant = False
+            constant_val = 0
+            if sname.lower().startswith('0x'):
+                try:
+                    constant_val = int(sname, 16)
+                    is_constant = True
+                    # Use a unique internal name for constants to avoid clashes if multiple messages use same constant? 
+                    # Use original hex string as name, but clean it?
+                    # Actually, we don't need a variable name for it. 
+                    # But we need it to NOT clash with "0x..." string logic below.
+                    # Let's keep sname as is for now, clean it later if needed.
+                except:
+                    pass
+
+            if not is_constant:
+                sname = re.sub(r'[^a-zA-Z0-9_]', '', sname)
             
+                # Check if signal name collides with a message name
+                if sname in seen_msg_names:
+                    raise Exception(f"Signal name '{sname}' collides with a Message Name! (In Message ID: {row['ID']})")
+                
             sdesc = str(row['Description']).strip() if pd.notna(row['Description']) else ""
             
             try:
@@ -716,43 +732,7 @@ def generate_c_code(messages, msg_map):
         h_content += f"#define {func_name.upper()}_THRESH_MS {thresh_ms}\n"
     h_content += "\n"
 
-    # Generate Defines
-    for pid in sorted(messages.keys()):
-        if pid not in msg_map:
-            continue
-            
-        msg_info = msg_map[pid]
-        msg_name = msg_info['name']
-        
-        # Sanitize for C function name
-        msg_name_clean = re.sub(r'[^a-zA-Z0-9_]', '', msg_name)
-        func_name = msg_name_clean
-        if not func_name: func_name = f"Msg_{pid:X}"
-        
-        h_content += f"#define {func_name.upper()}_ID 0x{pid:X}\n"
-
-    h_content += "\n"
-
-<<<<<<< HEAD
-    # Generate Defines
-    for pid in sorted(messages.keys()):
-        if pid not in msg_map:
-            continue
-            
-        msg_info = msg_map[pid]
-        msg_name = msg_info['name']
-        
-        # Sanitize for C function name
-        msg_name_clean = re.sub(r'[^a-zA-Z0-9_]', '', msg_name)
-        func_name = msg_name_clean
-        if not func_name: func_name = f"Msg_{pid:X}"
-        
-        h_content += f"#define {func_name.upper()}_ID 0x{pid:X}\n"
-
-    h_content += "\n"
-
-=======
->>>>>>> 9105219 (CAN message decode script)
+    # 3. Generate Functions
     count = 0
     for pid in sorted(messages.keys()):
         if pid not in msg_map:
@@ -1461,4 +1441,3 @@ def identify_arrays(messages):
                 sig['array_name'] = array_name
                 sig['array_index'] = idx 
                 sig['array_size'] = array_size 
-

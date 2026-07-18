@@ -15,16 +15,16 @@
 
 void turn_on_contactor(byte byNContactorID, byte byNContactorGPIOPin) {
     //PWM GPIO to contactor on dutycycle
-    ledc_set_duty(LEDC_LOW_SPEED_MODE, CONTACTOR_PWM_CHANNEL, DUTYCYCLE_CONTACOTR_ON); // Set duty cycle to 100
-    ledc_update_duty(LEDC_LOW_SPEED_MODE, CONTACTOR_PWM_CHANNEL); // Update duty cycle
+    ledc_set_duty(LEDC_SPEED_MODE_MAX, CONTACTOR_PWM_CHANNEL, DUTYCYCLE_CONTACOTR_ON); // Set duty cycle to 100
+    ledc_update_duty(LEDC_SPEED_MODE_MAX, CONTACTOR_PWM_CHANNEL); // Update duty cycle
 
     ESP_LOGI("Contactor", "Contactor %d turned ON\n", byNContactorID);
 }
 
 void hold_contactor_on(byte byNContactorID, byte byNContactorGPIOPin) {
     //PWM GPIO to contactor hold dutycycle
-    ledc_set_duty(LEDC_LOW_SPEED_MODE, CONTACTOR_PWM_CHANNEL, DUTYCYCLE_CONTACOTR_HOLD); // Set duty cycle to 80
-    ledc_update_duty(LEDC_LOW_SPEED_MODE, CONTACTOR_PWM_CHANNEL); // Update duty cycle
+    ledc_set_duty(LEDC_SPEED_MODE_MAX, CONTACTOR_PWM_CHANNEL, DUTYCYCLE_CONTACOTR_HOLD); // Set duty cycle to 80
+    ledc_update_duty(LEDC_SPEED_MODE_MAX, CONTACTOR_PWM_CHANNEL); // Update duty cycle
 
     ESP_LOGI("Contactor", "Contactor %d held ON\n", byNContactorID);
 }
@@ -32,8 +32,8 @@ void hold_contactor_on(byte byNContactorID, byte byNContactorGPIOPin) {
 
 void turn_off_contactor(byte byNContactorID, byte byNContactorGPIOPin) {
     //PWM GPIO to contactor off dutycycle
-    ledc_set_duty(LEDC_LOW_SPEED_MODE, CONTACTOR_PWM_CHANNEL, DUTYCYCLE_CONTACOTR_OFF); // Set duty cycle to 0
-    ledc_update_duty(LEDC_LOW_SPEED_MODE, CONTACTOR_PWM_CHANNEL); // Update duty cycle
+    ledc_set_duty(LEDC_SPEED_MODE_MAX, CONTACTOR_PWM_CHANNEL, DUTYCYCLE_CONTACOTR_OFF); // Set duty cycle to 0
+    ledc_update_duty(LEDC_SPEED_MODE_MAX, CONTACTOR_PWM_CHANNEL); // Update duty cycle
 
    ESP_LOGI("Contactor", "Contactor %d turned OFF\n", byNContactorID);
 }

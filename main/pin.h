@@ -5,8 +5,10 @@
 #define SFR_TAG  "SFR_ESP32"
 
 #define GPIO_ONBOARD_LED 15
-#define GPIO_CAN0_TX 22
-#define GPIO_CAN0_RX 23
+
+// for Screen PCB, the RX and TX pins are different 
+#define GPIO_CAN0_TX 16
+#define GPIO_CAN0_RX 17
 
 // #define GPIO_CAN1_TX XX
 // #define GPIO_CAN1_RX XX
@@ -22,8 +24,8 @@
 #define I2C0_SDA 21
 
 /* Wheel Only */
-#define EVE_PDN 16
-#define EVE_CS 17
+#define EVE_PDN 0
+#define EVE_CS 1
 
 /* IMD Monitor Only */
 #define IMD_PWM_IN ADC_CHANNEL_0 // GPIO0
