@@ -5,8 +5,8 @@
 #define SFR_TAG  "SFR_ESP32"
 
 #define GPIO_ONBOARD_LED 15
-#define GPIO_CAN0_TX 23
-#define GPIO_CAN0_RX 16
+#define GPIO_CAN0_TX 22
+#define GPIO_CAN0_RX 23
 
 /* CAN bus 2 optional */
 // #define GPIO_CAN1_TX XX
@@ -57,6 +57,6 @@
 #define CONTROL_HORN 1 // Extra 2
 #define CONTROL_PUMP 2 // Pump 1 and 2
 #define CONTROL_ACCUFAN 21 // Fan 1 and 2
-#define CONTROL_RELAY 22 // Relay
+#define CONTROL_RELAY 16 // Relay
 
 #endif // SFR_PIN
