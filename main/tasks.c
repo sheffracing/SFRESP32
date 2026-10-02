@@ -83,14 +83,6 @@ void task_1ms(void)
     /* CAN error handling */
     CANRxCheck1ms();
 
-    //Read switch states
-    read_pin();
-
-    //Send can message is switch state changed
-    if(BDashSwitchState != previous_switch1_state || BDashButtonState[0] != previous_button1_state || BDashButtonState[1] != previous_button2_state){
-        DashDataTx(stCANBus0);
-    }
-
     /* Update time since power up */
     dwTimeSincePowerUpms++;
 
@@ -112,6 +104,9 @@ void task_100ms(void)
 
     qwtTaskTimer = esp_timer_get_time();
     astTaskState[eTASK_100MS] = eTASK_ACTIVE;
+
+    //Read switch states
+    read_pin();
 
     /* CAN error handling */
     CANRxCheck1ms();
