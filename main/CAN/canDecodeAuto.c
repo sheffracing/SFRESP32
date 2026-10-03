@@ -486,31 +486,7 @@ esp_err_t MCUStatusTelemCarRx(CAN_frame_t stFrame)
     tLastTaskTimeBGTelemCar = (uint8_t)((float)(((stFrame.abData[4] >> 0) & 0xFF)) * 500.0f);
     tMaxTaskTimeBGTelemCar = (uint8_t)((float)(((stFrame.abData[5] >> 0) & 0xFF)) * 500.0f);
     tSincePowerUpTelemCar = (uint16_t)((float)((((uint16_t)((stFrame.abData[6] >> 0) & 0xFF)) << 4) | ((uint16_t)((stFrame.abData[7] >> 4) & 0xF))) * 4.0f);
-    NLastResetReasonTelemCar = (uint8_t)((float)(((stFrame.abData[7] >> 0) & 0xF)));
-    if (stFrame.byDLC != 8) return ESP_ERR_INVALID_SIZE;
-    if (stFrame.dwID != 0x11) return ESP_ERR_INVALID_ARG;
-
-    /* Standard Signals */
-    tLastTaskTime1msTelemCar = (uint8_t)((float)(((stFrame.abData[0] >> 0) & 0xFF)) * 50.0f);
-    tMaxTaskTime1msTelemCar = (uint8_t)((float)(((stFrame.abData[1] >> 0) & 0xFF)) * 50.0f);
-    tLastTaskTime100msTelemCar = (uint8_t)((float)(((stFrame.abData[2] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTime100msTelemCar = (uint8_t)((float)(((stFrame.abData[3] >> 0) & 0xFF)) * 500.0f);
-    tLastTaskTimeBGTelemCar = (uint8_t)((float)(((stFrame.abData[4] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTimeBGTelemCar = (uint8_t)((float)(((stFrame.abData[5] >> 0) & 0xFF)) * 500.0f);
-    tSincePowerUpTelemCar = (uint16_t)((float)((((uint16_t)((stFrame.abData[6] >> 0) & 0xFF)) << 4) | ((uint16_t)((stFrame.abData[7] >> 4) & 0xF))) * 4.0f);
-    NLastResetReasonTelemCar = (uint8_t)((float)(((stFrame.abData[7] >> 0) & 0xF)));
-    if (stFrame.byDLC != 8) return ESP_ERR_INVALID_SIZE;
-    if (stFrame.dwID != 0x11) return ESP_ERR_INVALID_ARG;
-
-    /* Standard Signals */
-    tLastTaskTime1msTelemCar = (uint8_t)((float)(((stFrame.abData[0] >> 0) & 0xFF)) * 50.0f);
-    tMaxTaskTime1msTelemCar = (uint8_t)((float)(((stFrame.abData[1] >> 0) & 0xFF)) * 50.0f);
-    tLastTaskTime100msTelemCar = (uint8_t)((float)(((stFrame.abData[2] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTime100msTelemCar = (uint8_t)((float)(((stFrame.abData[3] >> 0) & 0xFF)) * 500.0f);
-    tLastTaskTimeBGTelemCar = (uint8_t)((float)(((stFrame.abData[4] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTimeBGTelemCar = (uint8_t)((float)(((stFrame.abData[5] >> 0) & 0xFF)) * 500.0f);
-    tSincePowerUpTelemCar = (uint16_t)((float)((((uint16_t)((stFrame.abData[6] >> 0) & 0xFF)) << 4) | ((uint16_t)((stFrame.abData[7] >> 4) & 0xF))) * 4.0f);
-    NLastResetReasonTelemCar = (uint8_t)((float)(((stFrame.abData[7] >> 0) & 0xF)));
+    NLastResetReasonTelemCar = (uint8_t)(((stFrame.abData[7] >> 0) & 0xF));
     return ESP_OK;
 }
 
@@ -567,31 +543,7 @@ esp_err_t MCUStatusTelemPitsRx(CAN_frame_t stFrame)
     tLastTaskTimeBGTelemPits = (uint8_t)((float)(((stFrame.abData[4] >> 0) & 0xFF)) * 500.0f);
     tMaxTaskTimeBGTelemPits = (uint8_t)((float)(((stFrame.abData[5] >> 0) & 0xFF)) * 500.0f);
     tSincePowerUpTelemPits = (uint16_t)((float)((((uint16_t)((stFrame.abData[6] >> 0) & 0xFF)) << 4) | ((uint16_t)((stFrame.abData[7] >> 4) & 0xF))) * 4.0f);
-    NLastResetReasonTelemPits = (uint8_t)((float)(((stFrame.abData[7] >> 0) & 0xF)));
-    if (stFrame.byDLC != 8) return ESP_ERR_INVALID_SIZE;
-    if (stFrame.dwID != 0x12) return ESP_ERR_INVALID_ARG;
-
-    /* Standard Signals */
-    tLastTaskTime1msTelemPits = (uint8_t)((float)(((stFrame.abData[0] >> 0) & 0xFF)) * 50.0f);
-    tMaxTaskTime1msTelemPits = (uint8_t)((float)(((stFrame.abData[1] >> 0) & 0xFF)) * 50.0f);
-    tLastTaskTime100msTelemPits = (uint8_t)((float)(((stFrame.abData[2] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTime100msTelemPits = (uint8_t)((float)(((stFrame.abData[3] >> 0) & 0xFF)) * 500.0f);
-    tLastTaskTimeBGTelemPits = (uint8_t)((float)(((stFrame.abData[4] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTimeBGTelemPits = (uint8_t)((float)(((stFrame.abData[5] >> 0) & 0xFF)) * 500.0f);
-    tSincePowerUpTelemPits = (uint16_t)((float)((((uint16_t)((stFrame.abData[6] >> 0) & 0xFF)) << 4) | ((uint16_t)((stFrame.abData[7] >> 4) & 0xF))) * 4.0f);
-    NLastResetReasonTelemPits = (uint8_t)((float)(((stFrame.abData[7] >> 0) & 0xF)));
-    if (stFrame.byDLC != 8) return ESP_ERR_INVALID_SIZE;
-    if (stFrame.dwID != 0x12) return ESP_ERR_INVALID_ARG;
-
-    /* Standard Signals */
-    tLastTaskTime1msTelemPits = (uint8_t)((float)(((stFrame.abData[0] >> 0) & 0xFF)) * 50.0f);
-    tMaxTaskTime1msTelemPits = (uint8_t)((float)(((stFrame.abData[1] >> 0) & 0xFF)) * 50.0f);
-    tLastTaskTime100msTelemPits = (uint8_t)((float)(((stFrame.abData[2] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTime100msTelemPits = (uint8_t)((float)(((stFrame.abData[3] >> 0) & 0xFF)) * 500.0f);
-    tLastTaskTimeBGTelemPits = (uint8_t)((float)(((stFrame.abData[4] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTimeBGTelemPits = (uint8_t)((float)(((stFrame.abData[5] >> 0) & 0xFF)) * 500.0f);
-    tSincePowerUpTelemPits = (uint16_t)((float)((((uint16_t)((stFrame.abData[6] >> 0) & 0xFF)) << 4) | ((uint16_t)((stFrame.abData[7] >> 4) & 0xF))) * 4.0f);
-    NLastResetReasonTelemPits = (uint8_t)((float)(((stFrame.abData[7] >> 0) & 0xF)));
+    NLastResetReasonTelemPits = (uint8_t)(((stFrame.abData[7] >> 0) & 0xF));
     return ESP_OK;
 }
 
@@ -648,31 +600,7 @@ esp_err_t MCUStatusIMDMonitorRx(CAN_frame_t stFrame)
     tLastTaskTimeBGIMDMon = (uint8_t)((float)(((stFrame.abData[4] >> 0) & 0xFF)) * 500.0f);
     tMaxTaskTimeBGIMDMon = (uint8_t)((float)(((stFrame.abData[5] >> 0) & 0xFF)) * 500.0f);
     tSincePowerUpIMDMon = (uint16_t)((float)((((uint16_t)((stFrame.abData[6] >> 0) & 0xFF)) << 4) | ((uint16_t)((stFrame.abData[7] >> 4) & 0xF))) * 4.0f);
-    NLastResetReasonIMDMon = (uint8_t)((float)(((stFrame.abData[7] >> 0) & 0xF)));
-    if (stFrame.byDLC != 8) return ESP_ERR_INVALID_SIZE;
-    if (stFrame.dwID != 0x13) return ESP_ERR_INVALID_ARG;
-
-    /* Standard Signals */
-    tLastTaskTime1msIMDMon = (uint8_t)((float)(((stFrame.abData[0] >> 0) & 0xFF)) * 50.0f);
-    tMaxTaskTime1msIMDMon = (uint8_t)((float)(((stFrame.abData[1] >> 0) & 0xFF)) * 50.0f);
-    tLastTaskTime100msIMDMon = (uint8_t)((float)(((stFrame.abData[2] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTime100msIMDMon = (uint8_t)((float)(((stFrame.abData[3] >> 0) & 0xFF)) * 500.0f);
-    tLastTaskTimeBGIMDMon = (uint8_t)((float)(((stFrame.abData[4] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTimeBGIMDMon = (uint8_t)((float)(((stFrame.abData[5] >> 0) & 0xFF)) * 500.0f);
-    tSincePowerUpIMDMon = (uint16_t)((float)((((uint16_t)((stFrame.abData[6] >> 0) & 0xFF)) << 4) | ((uint16_t)((stFrame.abData[7] >> 4) & 0xF))) * 4.0f);
-    NLastResetReasonIMDMon = (uint8_t)((float)(((stFrame.abData[7] >> 0) & 0xF)));
-    if (stFrame.byDLC != 8) return ESP_ERR_INVALID_SIZE;
-    if (stFrame.dwID != 0x13) return ESP_ERR_INVALID_ARG;
-
-    /* Standard Signals */
-    tLastTaskTime1msIMDMon = (uint8_t)((float)(((stFrame.abData[0] >> 0) & 0xFF)) * 50.0f);
-    tMaxTaskTime1msIMDMon = (uint8_t)((float)(((stFrame.abData[1] >> 0) & 0xFF)) * 50.0f);
-    tLastTaskTime100msIMDMon = (uint8_t)((float)(((stFrame.abData[2] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTime100msIMDMon = (uint8_t)((float)(((stFrame.abData[3] >> 0) & 0xFF)) * 500.0f);
-    tLastTaskTimeBGIMDMon = (uint8_t)((float)(((stFrame.abData[4] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTimeBGIMDMon = (uint8_t)((float)(((stFrame.abData[5] >> 0) & 0xFF)) * 500.0f);
-    tSincePowerUpIMDMon = (uint16_t)((float)((((uint16_t)((stFrame.abData[6] >> 0) & 0xFF)) << 4) | ((uint16_t)((stFrame.abData[7] >> 4) & 0xF))) * 4.0f);
-    NLastResetReasonIMDMon = (uint8_t)((float)(((stFrame.abData[7] >> 0) & 0xF)));
+    NLastResetReasonIMDMon = (uint8_t)(((stFrame.abData[7] >> 0) & 0xF));
     return ESP_OK;
 }
 
@@ -729,31 +657,7 @@ esp_err_t MCUStatusLoggerRx(CAN_frame_t stFrame)
     tLastTaskTimeBGLogger = (uint8_t)((float)(((stFrame.abData[4] >> 0) & 0xFF)) * 500.0f);
     tMaxTaskTimeBGLogger = (uint8_t)((float)(((stFrame.abData[5] >> 0) & 0xFF)) * 500.0f);
     tSincePowerUpLogger = (uint16_t)((float)((((uint16_t)((stFrame.abData[6] >> 0) & 0xFF)) << 4) | ((uint16_t)((stFrame.abData[7] >> 4) & 0xF))) * 4.0f);
-    NLastResetReasonLogger = (uint8_t)((float)(((stFrame.abData[7] >> 0) & 0xF)));
-    if (stFrame.byDLC != 8) return ESP_ERR_INVALID_SIZE;
-    if (stFrame.dwID != 0x14) return ESP_ERR_INVALID_ARG;
-
-    /* Standard Signals */
-    tLastTaskTime1msLogger = (uint8_t)((float)(((stFrame.abData[0] >> 0) & 0xFF)) * 50.0f);
-    tMaxTaskTime1msLogger = (uint8_t)((float)(((stFrame.abData[1] >> 0) & 0xFF)) * 50.0f);
-    tLastTaskTime100msLogger = (uint8_t)((float)(((stFrame.abData[2] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTime100msLogger = (uint8_t)((float)(((stFrame.abData[3] >> 0) & 0xFF)) * 500.0f);
-    tLastTaskTimeBGLogger = (uint8_t)((float)(((stFrame.abData[4] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTimeBGLogger = (uint8_t)((float)(((stFrame.abData[5] >> 0) & 0xFF)) * 500.0f);
-    tSincePowerUpLogger = (uint16_t)((float)((((uint16_t)((stFrame.abData[6] >> 0) & 0xFF)) << 4) | ((uint16_t)((stFrame.abData[7] >> 4) & 0xF))) * 4.0f);
-    NLastResetReasonLogger = (uint8_t)((float)(((stFrame.abData[7] >> 0) & 0xF)));
-    if (stFrame.byDLC != 8) return ESP_ERR_INVALID_SIZE;
-    if (stFrame.dwID != 0x14) return ESP_ERR_INVALID_ARG;
-
-    /* Standard Signals */
-    tLastTaskTime1msLogger = (uint8_t)((float)(((stFrame.abData[0] >> 0) & 0xFF)) * 50.0f);
-    tMaxTaskTime1msLogger = (uint8_t)((float)(((stFrame.abData[1] >> 0) & 0xFF)) * 50.0f);
-    tLastTaskTime100msLogger = (uint8_t)((float)(((stFrame.abData[2] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTime100msLogger = (uint8_t)((float)(((stFrame.abData[3] >> 0) & 0xFF)) * 500.0f);
-    tLastTaskTimeBGLogger = (uint8_t)((float)(((stFrame.abData[4] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTimeBGLogger = (uint8_t)((float)(((stFrame.abData[5] >> 0) & 0xFF)) * 500.0f);
-    tSincePowerUpLogger = (uint16_t)((float)((((uint16_t)((stFrame.abData[6] >> 0) & 0xFF)) << 4) | ((uint16_t)((stFrame.abData[7] >> 4) & 0xF))) * 4.0f);
-    NLastResetReasonLogger = (uint8_t)((float)(((stFrame.abData[7] >> 0) & 0xF)));
+    NLastResetReasonLogger = (uint8_t)(((stFrame.abData[7] >> 0) & 0xF));
     return ESP_OK;
 }
 
@@ -810,31 +714,7 @@ esp_err_t MCUStatusPDURx(CAN_frame_t stFrame)
     tLastTaskTimeBGPDU = (uint8_t)((float)(((stFrame.abData[4] >> 0) & 0xFF)) * 500.0f);
     tMaxTaskTimeBGPDU = (uint8_t)((float)(((stFrame.abData[5] >> 0) & 0xFF)) * 500.0f);
     tSincePowerUpPDU = (uint16_t)((float)((((uint16_t)((stFrame.abData[6] >> 0) & 0xFF)) << 4) | ((uint16_t)((stFrame.abData[7] >> 4) & 0xF))) * 4.0f);
-    NLastResetReasonPDU = (uint8_t)((float)(((stFrame.abData[7] >> 0) & 0xF)));
-    if (stFrame.byDLC != 8) return ESP_ERR_INVALID_SIZE;
-    if (stFrame.dwID != 0x15) return ESP_ERR_INVALID_ARG;
-
-    /* Standard Signals */
-    tLastTaskTime1msPDU = (uint8_t)((float)(((stFrame.abData[0] >> 0) & 0xFF)) * 50.0f);
-    tMaxTaskTime1msPDU = (uint8_t)((float)(((stFrame.abData[1] >> 0) & 0xFF)) * 50.0f);
-    tLastTaskTime100msPDU = (uint8_t)((float)(((stFrame.abData[2] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTime100msPDU = (uint8_t)((float)(((stFrame.abData[3] >> 0) & 0xFF)) * 500.0f);
-    tLastTaskTimeBGPDU = (uint8_t)((float)(((stFrame.abData[4] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTimeBGPDU = (uint8_t)((float)(((stFrame.abData[5] >> 0) & 0xFF)) * 500.0f);
-    tSincePowerUpPDU = (uint16_t)((float)((((uint16_t)((stFrame.abData[6] >> 0) & 0xFF)) << 4) | ((uint16_t)((stFrame.abData[7] >> 4) & 0xF))) * 4.0f);
-    NLastResetReasonPDU = (uint8_t)((float)(((stFrame.abData[7] >> 0) & 0xF)));
-    if (stFrame.byDLC != 8) return ESP_ERR_INVALID_SIZE;
-    if (stFrame.dwID != 0x15) return ESP_ERR_INVALID_ARG;
-
-    /* Standard Signals */
-    tLastTaskTime1msPDU = (uint8_t)((float)(((stFrame.abData[0] >> 0) & 0xFF)) * 50.0f);
-    tMaxTaskTime1msPDU = (uint8_t)((float)(((stFrame.abData[1] >> 0) & 0xFF)) * 50.0f);
-    tLastTaskTime100msPDU = (uint8_t)((float)(((stFrame.abData[2] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTime100msPDU = (uint8_t)((float)(((stFrame.abData[3] >> 0) & 0xFF)) * 500.0f);
-    tLastTaskTimeBGPDU = (uint8_t)((float)(((stFrame.abData[4] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTimeBGPDU = (uint8_t)((float)(((stFrame.abData[5] >> 0) & 0xFF)) * 500.0f);
-    tSincePowerUpPDU = (uint16_t)((float)((((uint16_t)((stFrame.abData[6] >> 0) & 0xFF)) << 4) | ((uint16_t)((stFrame.abData[7] >> 4) & 0xF))) * 4.0f);
-    NLastResetReasonPDU = (uint8_t)((float)(((stFrame.abData[7] >> 0) & 0xF)));
+    NLastResetReasonPDU = (uint8_t)(((stFrame.abData[7] >> 0) & 0xF));
     return ESP_OK;
 }
 
@@ -891,31 +771,7 @@ esp_err_t StatusAPPSRx(CAN_frame_t stFrame)
     tLastTaskTimeBGAPPS = (uint8_t)((float)(((stFrame.abData[4] >> 0) & 0xFF)) * 500.0f);
     tMaxTaskTimeBGAPPS = (uint8_t)((float)(((stFrame.abData[5] >> 0) & 0xFF)) * 500.0f);
     tSincePowerUpAPPS = (uint16_t)((float)((((uint16_t)((stFrame.abData[6] >> 0) & 0xFF)) << 4) | ((uint16_t)((stFrame.abData[7] >> 4) & 0xF))) * 4.0f);
-    NLastResetReasonAPPS = (uint8_t)((float)(((stFrame.abData[7] >> 0) & 0xF)));
-    if (stFrame.byDLC != 8) return ESP_ERR_INVALID_SIZE;
-    if (stFrame.dwID != 0x16) return ESP_ERR_INVALID_ARG;
-
-    /* Standard Signals */
-    tLastTaskTime1msAPPS = (uint8_t)((float)(((stFrame.abData[0] >> 0) & 0xFF)) * 50.0f);
-    tMaxTaskTime1msAPPS = (uint8_t)((float)(((stFrame.abData[1] >> 0) & 0xFF)) * 50.0f);
-    tLastTaskTime100msAPPS = (uint8_t)((float)(((stFrame.abData[2] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTime100msAPPS = (uint8_t)((float)(((stFrame.abData[3] >> 0) & 0xFF)) * 500.0f);
-    tLastTaskTimeBGAPPS = (uint8_t)((float)(((stFrame.abData[4] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTimeBGAPPS = (uint8_t)((float)(((stFrame.abData[5] >> 0) & 0xFF)) * 500.0f);
-    tSincePowerUpAPPS = (uint16_t)((float)((((uint16_t)((stFrame.abData[6] >> 0) & 0xFF)) << 4) | ((uint16_t)((stFrame.abData[7] >> 4) & 0xF))) * 4.0f);
-    NLastResetReasonAPPS = (uint8_t)((float)(((stFrame.abData[7] >> 0) & 0xF)));
-    if (stFrame.byDLC != 8) return ESP_ERR_INVALID_SIZE;
-    if (stFrame.dwID != 0x16) return ESP_ERR_INVALID_ARG;
-
-    /* Standard Signals */
-    tLastTaskTime1msAPPS = (uint8_t)((float)(((stFrame.abData[0] >> 0) & 0xFF)) * 50.0f);
-    tMaxTaskTime1msAPPS = (uint8_t)((float)(((stFrame.abData[1] >> 0) & 0xFF)) * 50.0f);
-    tLastTaskTime100msAPPS = (uint8_t)((float)(((stFrame.abData[2] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTime100msAPPS = (uint8_t)((float)(((stFrame.abData[3] >> 0) & 0xFF)) * 500.0f);
-    tLastTaskTimeBGAPPS = (uint8_t)((float)(((stFrame.abData[4] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTimeBGAPPS = (uint8_t)((float)(((stFrame.abData[5] >> 0) & 0xFF)) * 500.0f);
-    tSincePowerUpAPPS = (uint16_t)((float)((((uint16_t)((stFrame.abData[6] >> 0) & 0xFF)) << 4) | ((uint16_t)((stFrame.abData[7] >> 4) & 0xF))) * 4.0f);
-    NLastResetReasonAPPS = (uint8_t)((float)(((stFrame.abData[7] >> 0) & 0xF)));
+    NLastResetReasonAPPS = (uint8_t)(((stFrame.abData[7] >> 0) & 0xF));
     return ESP_OK;
 }
 
@@ -972,31 +828,7 @@ esp_err_t MCUStatusScreenRx(CAN_frame_t stFrame)
     tLastTaskTimeBGScreen = (uint8_t)((float)(((stFrame.abData[4] >> 0) & 0xFF)) * 500.0f);
     tMaxTaskTimeBGScreen = (uint8_t)((float)(((stFrame.abData[5] >> 0) & 0xFF)) * 500.0f);
     tSincePowerUpScreen = (uint16_t)((float)((((uint16_t)((stFrame.abData[6] >> 0) & 0xFF)) << 4) | ((uint16_t)((stFrame.abData[7] >> 4) & 0xF))) * 4.0f);
-    NLastResetReasonScreen = (uint8_t)((float)(((stFrame.abData[7] >> 0) & 0xF)));
-    if (stFrame.byDLC != 8) return ESP_ERR_INVALID_SIZE;
-    if (stFrame.dwID != 0x17) return ESP_ERR_INVALID_ARG;
-
-    /* Standard Signals */
-    tLastTaskTime1msScreen = (uint8_t)((float)(((stFrame.abData[0] >> 0) & 0xFF)) * 50.0f);
-    tMaxTaskTime1msScreen = (uint8_t)((float)(((stFrame.abData[1] >> 0) & 0xFF)) * 50.0f);
-    tLastTaskTime100msScreen = (uint8_t)((float)(((stFrame.abData[2] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTime100msScreen = (uint8_t)((float)(((stFrame.abData[3] >> 0) & 0xFF)) * 500.0f);
-    tLastTaskTimeBGScreen = (uint8_t)((float)(((stFrame.abData[4] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTimeBGScreen = (uint8_t)((float)(((stFrame.abData[5] >> 0) & 0xFF)) * 500.0f);
-    tSincePowerUpScreen = (uint16_t)((float)((((uint16_t)((stFrame.abData[6] >> 0) & 0xFF)) << 4) | ((uint16_t)((stFrame.abData[7] >> 4) & 0xF))) * 4.0f);
-    NLastResetReasonScreen = (uint8_t)((float)(((stFrame.abData[7] >> 0) & 0xF)));
-    if (stFrame.byDLC != 8) return ESP_ERR_INVALID_SIZE;
-    if (stFrame.dwID != 0x17) return ESP_ERR_INVALID_ARG;
-
-    /* Standard Signals */
-    tLastTaskTime1msScreen = (uint8_t)((float)(((stFrame.abData[0] >> 0) & 0xFF)) * 50.0f);
-    tMaxTaskTime1msScreen = (uint8_t)((float)(((stFrame.abData[1] >> 0) & 0xFF)) * 50.0f);
-    tLastTaskTime100msScreen = (uint8_t)((float)(((stFrame.abData[2] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTime100msScreen = (uint8_t)((float)(((stFrame.abData[3] >> 0) & 0xFF)) * 500.0f);
-    tLastTaskTimeBGScreen = (uint8_t)((float)(((stFrame.abData[4] >> 0) & 0xFF)) * 500.0f);
-    tMaxTaskTimeBGScreen = (uint8_t)((float)(((stFrame.abData[5] >> 0) & 0xFF)) * 500.0f);
-    tSincePowerUpScreen = (uint16_t)((float)((((uint16_t)((stFrame.abData[6] >> 0) & 0xFF)) << 4) | ((uint16_t)((stFrame.abData[7] >> 4) & 0xF))) * 4.0f);
-    NLastResetReasonScreen = (uint8_t)((float)(((stFrame.abData[7] >> 0) & 0xF)));
+    NLastResetReasonScreen = (uint8_t)(((stFrame.abData[7] >> 0) & 0xF));
     return ESP_OK;
 }
 
@@ -1413,77 +1245,41 @@ esp_err_t ContactorDriverDataTx(twai_node_handle_t stCANBus)
     return CAN_transmit(stCANBus, &stFrame);
 }
 
-esp_err_t DashDataRx(CAN_frame_t stFrame)
+esp_err_t CellVoltagesRx(CAN_frame_t stFrame)
 {
     /*
     *===========================================================================
-    *   DashDataRx
-    *   Message: DashData (0x33)
+    *   CellVoltagesRx
+    *   Message: CellVoltages (0x36)
+    *   Description: All Cell Voltages
     *   Takes:   stFrame: The CAN frame to decode
     *   Returns: ESP_OK if successful, error code if not.
     *   Autogenerated by decodeCAN.py
     */
     if (stFrame.byDLC != 8) return ESP_ERR_INVALID_SIZE;
-    if (stFrame.dwID != 0x33) return ESP_ERR_INVALID_ARG;
+    if (stFrame.dwID != 0x36) return ESP_ERR_INVALID_ARG;
 
     tSinceCellVoltages = 0;
 
 
     /* Mux Switch */
-    CellID = (uint8_t)((float)(((stFrame.abData[0] >> 0) & 0xFF)));
+    CellID = (uint8_t)(((stFrame.abData[0] >> 0) & 0xFF));
 
     /* Muxed Signals */
     int muxVal = (int)(((stFrame.abData[0] >> 0) & 0xFF));
     if ((muxVal >= 0 && muxVal <= 111)) {
         VCell[muxVal] = (float)((float)((((uint16_t)((stFrame.abData[1] >> 0) & 0xFF)) << 8) | ((uint16_t)((stFrame.abData[2] >> 0) & 0xFF))) * 0.0001f);
-        BBalancingCell[muxVal] = (bool)((float)(((stFrame.abData[3] >> 0) & 0x1)));
+        BBalancingCell[muxVal] = (bool)(((stFrame.abData[3] >> 0) & 0x1));
         RCell[muxVal] = (float)((float)((((uint16_t)((stFrame.abData[3] >> 0) & 0x7F)) << 8) | ((uint16_t)((stFrame.abData[4] >> 0) & 0xFF))) * 0.01f);
         VOpenCell[muxVal] = (float)((float)((((uint16_t)((stFrame.abData[5] >> 0) & 0xFF)) << 8) | ((uint16_t)((stFrame.abData[6] >> 0) & 0xFF))) * 0.0001f);
     }
     return ESP_OK;
 }
 
-esp_err_t DashDataTx(twai_node_handle_t stCANBus)
+esp_err_t CellVoltagesTx(twai_node_handle_t stCANBus)
 {
     /*
     *===========================================================================
-    *   DashDataTx
-    *   Encodes and Transmits Message: DashData (0x33)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x33;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((float)CheckSum_CellVoltages) & 0xFF) >> 0) & 0xFF) << 0);
-
-    /* Mux Switch */
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((float)CellID) & 0xFF) >> 0) & 0xFF) << 0);
-
-    /* Muxed Signals */
-    int muxVal = (int)(CellID);
-    if ((muxVal >= 0 && muxVal <= 111)) {
-        stFrame.abData[1] |= (uint8_t)(((((uint32_t)(((float)VCell[muxVal]) / 0.0001f) & 0xFFFF) >> 8) & 0xFF) << 0);
-        stFrame.abData[2] |= (uint8_t)(((((uint32_t)(((float)VCell[muxVal]) / 0.0001f) & 0xFFFF) >> 0) & 0xFF) << 0);
-        stFrame.abData[3] |= (uint8_t)(((((uint32_t)((float)BBalancingCell[muxVal]) & 0x1) >> 0) & 0x1) << 0);
-        stFrame.abData[3] |= (uint8_t)(((((uint32_t)(((float)RCell[muxVal]) / 0.01f) & 0x7FFF) >> 8) & 0x7F) << 0);
-        stFrame.abData[4] |= (uint8_t)(((((uint32_t)(((float)RCell[muxVal]) / 0.01f) & 0x7FFF) >> 0) & 0xFF) << 0);
-        stFrame.abData[5] |= (uint8_t)(((((uint32_t)(((float)VOpenCell[muxVal]) / 0.0001f) & 0xFFFF) >> 8) & 0xFF) << 0);
-        stFrame.abData[6] |= (uint8_t)(((((uint32_t)(((float)VOpenCell[muxVal]) / 0.0001f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    }
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t IMDDataRx(CAN_frame_t stFrame)
-{
-    /*
-    *===========================================================================
-    *   IMDDataRx
     *   CellVoltagesTx
     *   Encodes and Transmits Message: CellVoltages (0x36)
     *   Uses global signal variables.
@@ -1496,54 +1292,16 @@ esp_err_t IMDDataRx(CAN_frame_t stFrame)
     stFrame.byDLC = 8;
     memset(stFrame.abData, 0, 8);
 
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((float)CheckSum_CellVoltages) & 0xFF) >> 0) & 0xFF) << 0);
 
     /* Mux Switch */
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((float)CellID) & 0xFF) >> 0) & 0xFF) << 0);
+    stFrame.abData[0] |= (uint8_t)(((((uint32_t)CellID & 0xFF) >> 0) & 0xFF) << 0);
 
     /* Muxed Signals */
     int muxVal = (int)(CellID);
     if ((muxVal >= 0 && muxVal <= 111)) {
         stFrame.abData[1] |= (uint8_t)(((((uint32_t)(((float)VCell[muxVal]) / 0.0001f) & 0xFFFF) >> 8) & 0xFF) << 0);
         stFrame.abData[2] |= (uint8_t)(((((uint32_t)(((float)VCell[muxVal]) / 0.0001f) & 0xFFFF) >> 0) & 0xFF) << 0);
-        stFrame.abData[3] |= (uint8_t)(((((uint32_t)((float)BBalancingCell[muxVal]) & 0x1) >> 0) & 0x1) << 0);
-        stFrame.abData[3] |= (uint8_t)(((((uint32_t)(((float)RCell[muxVal]) / 0.01f) & 0x7FFF) >> 8) & 0x7F) << 0);
-        stFrame.abData[4] |= (uint8_t)(((((uint32_t)(((float)RCell[muxVal]) / 0.01f) & 0x7FFF) >> 0) & 0xFF) << 0);
-        stFrame.abData[5] |= (uint8_t)(((((uint32_t)(((float)VOpenCell[muxVal]) / 0.0001f) & 0xFFFF) >> 8) & 0xFF) << 0);
-        stFrame.abData[6] |= (uint8_t)(((((uint32_t)(((float)VOpenCell[muxVal]) / 0.0001f) & 0xFFFF) >> 0) & 0xFF) << 0);
-    }
-
-    return CAN_transmit(stCANBus, &stFrame);
-}
-
-esp_err_t IMDDataRx(CAN_frame_t stFrame)
-{
-    /*
-    *===========================================================================
-    *   IMDDataRx
-    *   CellVoltagesTx
-    *   Encodes and Transmits Message: CellVoltages (0x36)
-    *   Uses global signal variables.
-    *   Takes:   stCANBus: Handle to CAN bus to transmit on
-    *   Returns: ESP_OK if successful, error code if not.
-    *   Autogenerated by decodeCAN.py
-    */
-    CAN_frame_t stFrame;
-    stFrame.dwID = 0x36;
-    stFrame.byDLC = 8;
-    memset(stFrame.abData, 0, 8);
-
-    stFrame.abData[7] |= (uint8_t)(((((uint32_t)((float)CheckSum_CellVoltages) & 0xFF) >> 0) & 0xFF) << 0);
-
-    /* Mux Switch */
-    stFrame.abData[0] |= (uint8_t)(((((uint32_t)((float)CellID) & 0xFF) >> 0) & 0xFF) << 0);
-
-    /* Muxed Signals */
-    int muxVal = (int)(CellID);
-    if ((muxVal >= 0 && muxVal <= 111)) {
-        stFrame.abData[1] |= (uint8_t)(((((uint32_t)(((float)VCell[muxVal]) / 0.0001f) & 0xFFFF) >> 8) & 0xFF) << 0);
-        stFrame.abData[2] |= (uint8_t)(((((uint32_t)(((float)VCell[muxVal]) / 0.0001f) & 0xFFFF) >> 0) & 0xFF) << 0);
-        stFrame.abData[3] |= (uint8_t)(((((uint32_t)((float)BBalancingCell[muxVal]) & 0x1) >> 0) & 0x1) << 0);
+        stFrame.abData[3] |= (uint8_t)(((((uint32_t)BBalancingCell[muxVal] & 0x1) >> 0) & 0x1) << 0);
         stFrame.abData[3] |= (uint8_t)(((((uint32_t)(((float)RCell[muxVal]) / 0.01f) & 0x7FFF) >> 8) & 0x7F) << 0);
         stFrame.abData[4] |= (uint8_t)(((((uint32_t)(((float)RCell[muxVal]) / 0.01f) & 0x7FFF) >> 0) & 0xFF) << 0);
         stFrame.abData[5] |= (uint8_t)(((((uint32_t)(((float)VOpenCell[muxVal]) / 0.0001f) & 0xFFFF) >> 8) & 0xFF) << 0);
