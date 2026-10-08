@@ -152,6 +152,12 @@ void task_1ms(void)
         BTSActive = FALSE;
     }
 
+    /* Update CAN status flags */
+    BBMSLinkOK = BCellStats1InError;
+    BAPPSLinkOK = BStatusAPPSInError;
+    BInverterLinkOK = BERPM_DUTY_VOLTAGEInError;
+    BDashLinkOK = BDashDataInError;
+
     /* CAN error handling */
     CANRxCheck1ms();
 

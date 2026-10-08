@@ -109,6 +109,10 @@ float IAIRPos = 0;
 float IAIRNeg = 0;
 float IAIRPre = 0;
 float VAIRDelta = 0;
+bool BBMSLinkOK = 0;
+bool BDashLinkOK = 0;
+bool BAPPSLinkOK = 0;
+bool BInverterLinkOK = 0;
 uint8_t CellID = 0;
 float VCell[112] = {0};
 float RCell[112] = {0};
@@ -1204,6 +1208,10 @@ esp_err_t ContactorDriverDataRx(CAN_frame_t stFrame)
     IAIRNeg = (float)((float)((((stFrame.abData[4] >> 0) & 0xF) << 4) | ((stFrame.abData[5] >> 4) & 0xF)) * 0.1f);
     IAIRPre = (float)((float)((((stFrame.abData[5] >> 0) & 0xF) << 4) | ((stFrame.abData[6] >> 4) & 0xF)) * 0.1f);
     VAIRDelta = (float)((float)((((stFrame.abData[6] >> 0) & 0xF) << 4) | ((stFrame.abData[7] >> 4) & 0xF)));
+    BBMSLinkOK = (bool)(((stFrame.abData[7] >> 3) & 0x1));
+    BDashLinkOK = (bool)(((stFrame.abData[7] >> 2) & 0x1));
+    BAPPSLinkOK = (bool)(((stFrame.abData[7] >> 1) & 0x1));
+    BInverterLinkOK = (bool)(((stFrame.abData[7] >> 0) & 0x1));
     return ESP_OK;
 }
 
@@ -1241,6 +1249,10 @@ esp_err_t ContactorDriverDataTx(twai_node_handle_t stCANBus)
     stFrame.abData[6] |= (uint8_t)(((((uint32_t)(((float)IAIRPre) / 0.1f) & 0xFF) >> 0) & 0xF) << 4);
     stFrame.abData[6] |= (uint8_t)(((((uint32_t)((float)VAIRDelta) & 0xFF) >> 4) & 0xF) << 0);
     stFrame.abData[7] |= (uint8_t)(((((uint32_t)((float)VAIRDelta) & 0xFF) >> 0) & 0xF) << 4);
+    stFrame.abData[7] |= (uint8_t)(((((uint32_t)BBMSLinkOK & 0x1) >> 0) & 0x1) << 3);
+    stFrame.abData[7] |= (uint8_t)(((((uint32_t)BDashLinkOK & 0x1) >> 0) & 0x1) << 2);
+    stFrame.abData[7] |= (uint8_t)(((((uint32_t)BAPPSLinkOK & 0x1) >> 0) & 0x1) << 1);
+    stFrame.abData[7] |= (uint8_t)(((((uint32_t)BInverterLinkOK & 0x1) >> 0) & 0x1) << 0);
 
     return CAN_transmit(stCANBus, &stFrame);
 }
@@ -4293,47 +4305,47 @@ void CANRxCheck1ms(void)
 
 void CANRxCheck100ms(void)
 {
-    tSinceESPControl += 100; if (tSinceESPControl > 500) BESPControlInError = true;
-    tSinceMCUStatusTelemCar += 100; if (tSinceMCUStatusTelemCar > 5000) BMCUStatusTelemCarInError = true;
-    tSinceMCUStatusTelemPits += 100; if (tSinceMCUStatusTelemPits > 5000) BMCUStatusTelemPitsInError = true;
-    tSinceMCUStatusIMDMonitor += 100; if (tSinceMCUStatusIMDMonitor > 5000) BMCUStatusIMDMonitorInError = true;
-    tSinceMCUStatusLogger += 100; if (tSinceMCUStatusLogger > 5000) BMCUStatusLoggerInError = true;
-    tSinceMCUStatusPDU += 100; if (tSinceMCUStatusPDU > 5000) BMCUStatusPDUInError = true;
-    tSinceStatusAPPS += 100; if (tSinceStatusAPPS > 5000) BStatusAPPSInError = true;
-    tSinceMCUStatusScreen += 100; if (tSinceMCUStatusScreen > 5000) BMCUStatusScreenInError = true;
-    tSinceMCUStatusDash += 100; if (tSinceMCUStatusDash > 5000) BMCUStatusDashInError = true;
-    tSinceMCUStatusDyno += 100; if (tSinceMCUStatusDyno > 5000) BMCUStatusDynoInError = true;
-    tSinceMCUStatusTempMon += 100; if (tSinceMCUStatusTempMon > 5000) BMCUStatusTempMonInError = true;
-    tSinceMCUStatusContactorDriver += 100; if (tSinceMCUStatusContactorDriver > 5000) BMCUStatusContactorDriverInError = true;
-    tSinceSetAcCurrent += 100; if (tSinceSetAcCurrent > 500) BSetAcCurrentInError = true;
-    tSinceDashData += 100; if (tSinceDashData > 500) BDashDataInError = true;
-    tSinceContactorDriverData += 100; if (tSinceContactorDriverData > 500) BContactorDriverDataInError = true;
-    tSinceIMDData += 100; if (tSinceIMDData > 500) BIMDDataInError = true;
-    tSinceSetBrakeCurrent += 100; if (tSinceSetBrakeCurrent > 500) BSetBrakeCurrentInError = true;
-    tSinceSetERPM += 100; if (tSinceSetERPM > 500) BSetERPMInError = true;
-    tSinceStatusAPPSSensor += 100; if (tSinceStatusAPPSSensor > 500) BStatusAPPSSensorInError = true;
-    tSinceSetPosition += 100; if (tSinceSetPosition > 500) BSetPositionInError = true;
-    tSinceDynoPressuresRaw += 100; if (tSinceDynoPressuresRaw > 500) BDynoPressuresRawInError = true;
-    tSinceDynoTempsRaw += 100; if (tSinceDynoTempsRaw > 500) BDynoTempsRawInError = true;
-    tSinceDynoPressures += 100; if (tSinceDynoPressures > 500) BDynoPressuresInError = true;
-    tSinceDynoTemps += 100; if (tSinceDynoTemps > 500) BDynoTempsInError = true;
-    tSinceDynoCooling += 100; if (tSinceDynoCooling > 500) BDynoCoolingInError = true;
-    tSincePDUStats1 += 100; if (tSincePDUStats1 > 500) BPDUStats1InError = true;
-    tSincePDUStats2 += 100; if (tSincePDUStats2 > 500) BPDUStats2InError = true;
-    tSincePDUStats3 += 100; if (tSincePDUStats3 > 500) BPDUStats3InError = true;
-    tSinceSetRelBrakeCurrent += 100; if (tSinceSetRelBrakeCurrent > 500) BSetRelBrakeCurrentInError = true;
-    tSinceSetDigOutput += 100; if (tSinceSetDigOutput > 500) BSetDigOutputInError = true;
-    tSinceSetMaxAcCurrent += 100; if (tSinceSetMaxAcCurrent > 500) BSetMaxAcCurrentInError = true;
-    tSinceSetMaxAcBrakeCurrent += 100; if (tSinceSetMaxAcBrakeCurrent > 500) BSetMaxAcBrakeCurrentInError = true;
-    tSinceSetMaxDcCurrent += 100; if (tSinceSetMaxDcCurrent > 500) BSetMaxDcCurrentInError = true;
-    tSinceSetMaxDcBrakeCurrent += 100; if (tSinceSetMaxDcBrakeCurrent > 500) BSetMaxDcBrakeCurrentInError = true;
-    tSinceSetDriveEnable += 100; if (tSinceSetDriveEnable > 500) BSetDriveEnableInError = true;
-    tSinceCellTempStats += 100; if (tSinceCellTempStats > 500) BCellTempStatsInError = true;
-    tSinceElconInterface2 += 100; if (tSinceElconInterface2 > 4040) BElconInterface2InError = true;
-    tSinceElconInterface1 += 100; if (tSinceElconInterface1 > 4040) BElconInterface1InError = true;
-    tSinceElconInterface3 += 100; if (tSinceElconInterface3 > 4040) BElconInterface3InError = true;
-    tSinceCellTempGeneral += 100; if (tSinceCellTempGeneral > 500) BCellTempGeneralInError = true;
-    tSinceBMSCellTemp += 100; if (tSinceBMSCellTemp > 500) BBMSCellTempInError = true;
-    tSinceTempMonAddressCast += 100; if (tSinceTempMonAddressCast > 1000) BTempMonAddressCastInError = true;
+    tSinceESPControl += 100; if (tSinceESPControl > 500) BESPControlInError = TRUE; else BESPControlInError = FALSE;
+    tSinceMCUStatusTelemCar += 100; if (tSinceMCUStatusTelemCar > 5000) BMCUStatusTelemCarInError = TRUE; else BMCUStatusTelemCarInError = FALSE;
+    tSinceMCUStatusTelemPits += 100; if (tSinceMCUStatusTelemPits > 5000) BMCUStatusTelemPitsInError = TRUE; else BMCUStatusTelemPitsInError = FALSE;
+    tSinceMCUStatusIMDMonitor += 100; if (tSinceMCUStatusIMDMonitor > 5000) BMCUStatusIMDMonitorInError = TRUE; else BMCUStatusIMDMonitorInError = FALSE;
+    tSinceMCUStatusLogger += 100; if (tSinceMCUStatusLogger > 5000) BMCUStatusLoggerInError = TRUE; else BMCUStatusLoggerInError = FALSE;
+    tSinceMCUStatusPDU += 100; if (tSinceMCUStatusPDU > 5000) BMCUStatusPDUInError = TRUE; else BMCUStatusPDUInError = FALSE;
+    tSinceStatusAPPS += 100; if (tSinceStatusAPPS > 5000) BStatusAPPSInError = TRUE; else BStatusAPPSInError = FALSE;
+    tSinceMCUStatusScreen += 100; if (tSinceMCUStatusScreen > 5000) BMCUStatusScreenInError = TRUE; else BMCUStatusScreenInError = FALSE;
+    tSinceMCUStatusDash += 100; if (tSinceMCUStatusDash > 5000) BMCUStatusDashInError = TRUE; else BMCUStatusDashInError = FALSE;
+    tSinceMCUStatusDyno += 100; if (tSinceMCUStatusDyno > 5000) BMCUStatusDynoInError = TRUE; else BMCUStatusDynoInError = FALSE;
+    tSinceMCUStatusTempMon += 100; if (tSinceMCUStatusTempMon > 5000) BMCUStatusTempMonInError = TRUE; else BMCUStatusTempMonInError = FALSE;
+    tSinceMCUStatusContactorDriver += 100; if (tSinceMCUStatusContactorDriver > 5000) BMCUStatusContactorDriverInError = TRUE; else BMCUStatusContactorDriverInError = FALSE;
+    tSinceSetAcCurrent += 100; if (tSinceSetAcCurrent > 500) BSetAcCurrentInError = TRUE; else BSetAcCurrentInError = FALSE;
+    tSinceDashData += 100; if (tSinceDashData > 500) BDashDataInError = TRUE; else BDashDataInError = FALSE;
+    tSinceContactorDriverData += 100; if (tSinceContactorDriverData > 500) BContactorDriverDataInError = TRUE; else BContactorDriverDataInError = FALSE;
+    tSinceIMDData += 100; if (tSinceIMDData > 500) BIMDDataInError = TRUE; else BIMDDataInError = FALSE;
+    tSinceSetBrakeCurrent += 100; if (tSinceSetBrakeCurrent > 500) BSetBrakeCurrentInError = TRUE; else BSetBrakeCurrentInError = FALSE;
+    tSinceSetERPM += 100; if (tSinceSetERPM > 500) BSetERPMInError = TRUE; else BSetERPMInError = FALSE;
+    tSinceStatusAPPSSensor += 100; if (tSinceStatusAPPSSensor > 500) BStatusAPPSSensorInError = TRUE; else BStatusAPPSSensorInError = FALSE;
+    tSinceSetPosition += 100; if (tSinceSetPosition > 500) BSetPositionInError = TRUE; else BSetPositionInError = FALSE;
+    tSinceDynoPressuresRaw += 100; if (tSinceDynoPressuresRaw > 500) BDynoPressuresRawInError = TRUE; else BDynoPressuresRawInError = FALSE;
+    tSinceDynoTempsRaw += 100; if (tSinceDynoTempsRaw > 500) BDynoTempsRawInError = TRUE; else BDynoTempsRawInError = FALSE;
+    tSinceDynoPressures += 100; if (tSinceDynoPressures > 500) BDynoPressuresInError = TRUE; else BDynoPressuresInError = FALSE;
+    tSinceDynoTemps += 100; if (tSinceDynoTemps > 500) BDynoTempsInError = TRUE; else BDynoTempsInError = FALSE;
+    tSinceDynoCooling += 100; if (tSinceDynoCooling > 500) BDynoCoolingInError = TRUE; else BDynoCoolingInError = FALSE;
+    tSincePDUStats1 += 100; if (tSincePDUStats1 > 500) BPDUStats1InError = TRUE; else BPDUStats1InError = FALSE;
+    tSincePDUStats2 += 100; if (tSincePDUStats2 > 500) BPDUStats2InError = TRUE; else BPDUStats2InError = FALSE;
+    tSincePDUStats3 += 100; if (tSincePDUStats3 > 500) BPDUStats3InError = TRUE; else BPDUStats3InError = FALSE;
+    tSinceSetRelBrakeCurrent += 100; if (tSinceSetRelBrakeCurrent > 500) BSetRelBrakeCurrentInError = TRUE; else BSetRelBrakeCurrentInError = FALSE;
+    tSinceSetDigOutput += 100; if (tSinceSetDigOutput > 500) BSetDigOutputInError = TRUE; else BSetDigOutputInError = FALSE;
+    tSinceSetMaxAcCurrent += 100; if (tSinceSetMaxAcCurrent > 500) BSetMaxAcCurrentInError = TRUE; else BSetMaxAcCurrentInError = FALSE;
+    tSinceSetMaxAcBrakeCurrent += 100; if (tSinceSetMaxAcBrakeCurrent > 500) BSetMaxAcBrakeCurrentInError = TRUE; else BSetMaxAcBrakeCurrentInError = FALSE;
+    tSinceSetMaxDcCurrent += 100; if (tSinceSetMaxDcCurrent > 500) BSetMaxDcCurrentInError = TRUE; else BSetMaxDcCurrentInError = FALSE;
+    tSinceSetMaxDcBrakeCurrent += 100; if (tSinceSetMaxDcBrakeCurrent > 500) BSetMaxDcBrakeCurrentInError = TRUE; else BSetMaxDcBrakeCurrentInError = FALSE;
+    tSinceSetDriveEnable += 100; if (tSinceSetDriveEnable > 500) BSetDriveEnableInError = TRUE; else BSetDriveEnableInError = FALSE;
+    tSinceCellTempStats += 100; if (tSinceCellTempStats > 500) BCellTempStatsInError = TRUE; else BCellTempStatsInError = FALSE;
+    tSinceElconInterface2 += 100; if (tSinceElconInterface2 > 4040) BElconInterface2InError = TRUE; else BElconInterface2InError = FALSE;
+    tSinceElconInterface1 += 100; if (tSinceElconInterface1 > 4040) BElconInterface1InError = TRUE; else BElconInterface1InError = FALSE;
+    tSinceElconInterface3 += 100; if (tSinceElconInterface3 > 4040) BElconInterface3InError = TRUE; else BElconInterface3InError = FALSE;
+    tSinceCellTempGeneral += 100; if (tSinceCellTempGeneral > 500) BCellTempGeneralInError = TRUE; else BCellTempGeneralInError = FALSE;
+    tSinceBMSCellTemp += 100; if (tSinceBMSCellTemp > 500) BBMSCellTempInError = TRUE; else BBMSCellTempInError = FALSE;
+    tSinceTempMonAddressCast += 100; if (tSinceTempMonAddressCast > 1000) BTempMonAddressCastInError = TRUE; else BTempMonAddressCastInError = FALSE;
 }
 
