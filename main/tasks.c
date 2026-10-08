@@ -34,7 +34,7 @@ ledc_channel_config_t stAIRPosChannelConfig = {
 ledc_channel_config_t stAIRNegChannelConfig = {
     .gpio_num = GPIO_MAIN_NEG_CONTACTOR_PWM,
     .speed_mode = LEDC_LOW_SPEED_MODE,
-    .channel = LEDC_CHANNEL_0,
+    .channel = LEDC_CHANNEL_1,
     .intr_type = LEDC_INTR_DISABLE,
     .timer_sel = LEDC_TIMER_0,
     .duty = 0,
@@ -47,7 +47,7 @@ ledc_channel_config_t stAIRNegChannelConfig = {
 ledc_channel_config_t stAIRPreChannelConfig = {
     .gpio_num = GPIO_PRECHARGE_CONTACTOR_PWM,
     .speed_mode = LEDC_LOW_SPEED_MODE,
-    .channel = LEDC_CHANNEL_0,
+    .channel = LEDC_CHANNEL_2,
     .intr_type = LEDC_INTR_DISABLE,
     .timer_sel = LEDC_TIMER_0,
     .duty = 0,
@@ -115,19 +115,34 @@ void task_1ms(void)
     qword qwtTaskTimer;
     qwtTaskTimer = esp_timer_get_time();
     astTaskState[eTASK_1MS] = eTASK_ACTIVE;
+    bool BVAIRDeltaInError = FALSE;
+
+    /* CAN Read */
+    CAN_read_from_buffer();
 
     /* Check TS status */
     VAIRDelta = VPackInstant - Actual_InputVoltage;
-    if (VAIRDelta < VPackInstant * PRECHARGE_THRESHOLD / 100)
+    if (BCellStats1InError && BERPM_DUTY_VOLTAGEInError)
+    {
+        BVAIRDeltaInError = TRUE;
+    } else
+    {
+        BVAIRDeltaInError = FALSE;
+    }
+
+    if ((VAIRDelta < VPackInstant * PRECHARGE_THRESHOLD / 100)
+        && !BVAIRDeltaInError)
     {
         BTSCharged = 1;
     } else
     {
         BTSCharged = 0;
     }
+
     if (BStatusAPPSInError && 
         !BDashDataInError &&
-        BDashSwitchState)
+        BDashSwitchState &&
+        !BVAIRDeltaInError)
     {
         BTSActive = TRUE;
     }
@@ -157,13 +172,13 @@ void task_100ms(void)
 {   
     static qword qwtTaskTimer;
     static word wNCounter;
-    word tSinceTSOn = 0;
+    static qword tSinceTSOn = 0;
 
     qwtTaskTimer = esp_timer_get_time();
     astTaskState[eTASK_100MS] = eTASK_ACTIVE;
 
     /* CAN error handling */
-    CANRxCheck1ms();
+    CANRxCheck100ms();
     
     /* Update TS on time */
     if (BTSActive == TRUE)
@@ -174,6 +189,10 @@ void task_100ms(void)
         tSinceTSOn = 0;
     }
 
+    /* Debug */
+    // BTSCharged = TRUE;
+    // BTSActive = TRUE;
+    
     /* Contactor control */
     if (BTSActive == TRUE)
     {
@@ -208,6 +227,7 @@ void task_100ms(void)
         if (tSinceTSOn > 4200 && rAIRPosDuty == 100) 
         {
             rAIRPosDuty = 30;
+            rAIRPreDuty = 0;
         }
 
         /* Voltage failed to rise */
@@ -216,7 +236,6 @@ void task_100ms(void)
             rAIRPosDuty = 0;
             rAIRNegDuty = 0;
             rAIRPreDuty = 0;
-            tSinceTSOn = 0;
         }
     } else
     {
@@ -226,6 +245,16 @@ void task_100ms(void)
         tSinceTSOn = 0;
     }
 
+    /* Contactor Monitoring */
+    if (rAIRPosDuty > 0) BAIRPosClosed = TRUE; else BAIRPosClosed = FALSE;
+    if (rAIRNegDuty > 0) BAIRNegClosed = TRUE; else BAIRNegClosed = FALSE;
+    if (rAIRPreDuty > 0) BAIRPreClosed = TRUE; else BAIRPreClosed = FALSE;
+
+    ESP_LOGI(SFR_TAG, "TS Active: %d, TS On Time: %d ms, Precharge Complete: %d, AIR Pos Duty: %f, AIR Neg Duty: %f, AIR Pre Duty: %f", 
+        BTSActive, tSinceTSOn, BTSCharged, rAIRPosDuty, rAIRNegDuty, rAIRPreDuty);
+    // ESP_LOGI(SFR_TAG, "TS Active: %d, tSinceDashData: %d,BStatusAPPSInError: %d, BDashDataInError: %d, BDashSwitchState: %d", 
+    //     BTSActive, tSinceDashData, BStatusAPPSInError, BDashDataInError, BDashSwitchState);
+
     /* setting duty cycles */
     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, (rAIRPosDuty*PWM_MAX_DUTY)/100);
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
@@ -233,6 +262,9 @@ void task_100ms(void)
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1);
     ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2, (rAIRPreDuty*PWM_MAX_DUTY)/100);
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2);
+
+    /* Send CAN frames */
+    ContactorDriverDataTx(stCANBus0);
 
     /* Every Second */
     if ( wNCounter % (PERIOD_1S / PERIOD_TASK_100MS) == 0 ) 

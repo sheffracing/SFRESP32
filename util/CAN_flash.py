@@ -47,7 +47,7 @@ APP_NAME = "CAN_Flash"   # Name to appear in Vector Hardware Config
 
 # CAN Protocol Definitions
 CAN_CMD_ID = 0x010
-DEVICE_ID = 0xFF
+DEVICE_ID = 0x1B
 CRC8_POLYNOMIAL = 0x12F
 
 # Command Codes (Must match firmware eCAN_CMD_t)
