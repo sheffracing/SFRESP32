@@ -137,8 +137,6 @@ void initStaticBackground(void)
     EVE_widget_rectangle(EVE_VSIZE/2 - 80, 50 , 160U, 80U, 0, 10, WHITE);  // x, y, width, height, border, transparency, colour
     EVE_color_rgb(DARK_GREY);
     EVE_cmd_text(EVE_VSIZE/2 - 75, 55, 20, 0, "Battery:");  //x, y, font
-    EVE_color_rgb(BLACK);
-    EVE_cmd_text(EVE_VSIZE/2, EVE_HSIZE/2-65, 31, EVE_OPT_CENTER, abySOCBuffer);  //x, y, font
     EVE_color_rgb(WHITE);
 
     // Rectangle Cell temperature
