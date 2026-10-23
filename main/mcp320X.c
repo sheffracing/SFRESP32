@@ -26,7 +26,7 @@ spi_device_handle_t stMCP3208;
 
 
 /* --------------------------- Functions ------------------------------ */
-esp_err_t MCP320X_init(word wNDevices, uint8_t abyNCSPins[], spi_device_handle_t astDeviceHandles[])
+esp_err_t MCP320X_init(uint8_t NCSPin, spi_device_handle_t stDeviceHandle)
 {
     /*
     *===========================================================================
@@ -40,6 +40,7 @@ esp_err_t MCP320X_init(word wNDevices, uint8_t abyNCSPins[], spi_device_handle_t
     *   Revision History:
     *   24/02/26 CP Initial Version
     *   02/03/26 CP Supports multiple devices
+    *   23/03/26 CP Switched back to single device. 
     *
     *===========================================================================
     */
@@ -52,16 +53,14 @@ esp_err_t MCP320X_init(word wNDevices, uint8_t abyNCSPins[], spi_device_handle_t
         .command_bits = 0,
         .address_bits = 0, 
         .queue_size = 5,
+        .spics_io_num = NCSPin,
     };
-    for (wNCounter = 0; wNCounter < wNDevices; wNCounter++)
+
+    eStatus = spi_bus_add_device(SPI2_HOST, &stDeviceConfig, &stDeviceHandle);
+    if (eStatus != ESP_OK)
     {
-        stDeviceConfig.spics_io_num = abyNCSPins[wNCounter];
-        eStatus = spi_bus_add_device(SPI2_HOST, &stDeviceConfig, &astDeviceHandles[wNCounter]);
-        if (eStatus != ESP_OK)
-        {
-            ESP_LOGE(SFR_TAG, "Failed to add MCP320X device %d: %s", wNCounter, esp_err_to_name(eStatus));
-            return eStatus;
-        }
+        ESP_LOGE(SFR_TAG, "Failed to add MCP320X device: %s", esp_err_to_name(eStatus));
+        return eStatus;
     }
     return eStatus;
 }

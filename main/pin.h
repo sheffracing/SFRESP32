@@ -1,47 +1,28 @@
 #ifndef SFR_PIN
 #define SFR_PIN
 
-/* All Devices */
-#define SFR_TAG  "SFR_ESP32"
+#define SFR_TAG  "SFR_BMS"
 
-#define GPIO_ONBOARD_LED 15
-#define GPIO_CAN0_TX 22
-#define GPIO_CAN0_RX 23
+/* SDIO - SD Card connection */
+#define SDIO_CLK    19
+#define SDIO_CMD    18
+#define SDIO_D0     20
+#define SDIO_D1     21
+#define SDIO_D2     22
+#define SDIO_D3     23
 
-// #define GPIO_CAN1_TX XX
-// #define GPIO_CAN1_RX XX
+/* SPI Bus 2 */
+#define SPI2_CLK    6
+#define SPI2_CS     16
+#define SPI2_MISO   7
+#define SPI2_MOSI   2
 
-/* SPI Common For all devices */
-#define SPI_MOSI 18
-#define SPI_SCK 19
-#define SPI_MISO 20
+/* CAN */
+#define CAN0_TX     0
+#define CAN0_RX     1
 
-/* Logger only */
-#define SPI_SD_CS 17
-#define I2C0_SCL 2
-#define I2C0_SDA 21
-
-/* Wheel Only */
-#define EVE_PDN 16
-#define EVE_CS 17
-
-/* IMD Monitor Only */
-#define IMD_PWM_IN ADC_CHANNEL_0 // GPIO0
-
-/* APPs Only */
-#define APPS1_IN ADC_CHANNEL_0 // GPIO0
-#define APPS2_IN ADC_CHANNEL_1 // GPIO1
-
-/* Contactor Drive Only */
-#define GPIO_PRECHARGE_CONTACTOR_PWM 0 
-#define GPIO_MAIN_POS_CONTACTOR_PWM 1
-#define GPIO_MAIN_NEG_CONTACTOR_PWM 2
-
-/* TempMonitor Only */
-#define SPI_MCP3208_CS 17
-
-/* Dyno Only */
-#define SPI_MCP3204_1_CS 17
-#define SPI_MCP3204_2_CS 16
+/* LEDs */
+#define LED1        10 //Red
+#define LED2        11 //Green
 
 #endif // SFR_PIN
