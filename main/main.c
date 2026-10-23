@@ -4,6 +4,7 @@ File contains the main function for the ESP32-C6 based CAN Blaster.
 This program sends set can messages out to the bus to test loading and other devicess recieve functionality.
 
 Written by Cole Perera for Sheffield Formula Racing 2025
+This software was written by humans and is licensed under GNU General Public License v3.0. See LICENSE.txt for more details.
 */
 
 /* --------------------------- Includes ----------------------------- */

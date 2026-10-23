@@ -3,6 +3,7 @@ mcp320X.c
 File contains the MCP3204/8 interface over spi.
 
 Written by Cole Perera for Sheffield Formula Racing 2026
+This software was written by humans and is licensed under GNU General Public License v3.0. See LICENSE.txt for more details.
 */
 
 #include "mcp320X.h"

@@ -4,6 +4,7 @@ File contains the functions for comunicating with a pepetual timer for a esp32c6
 over I2C. Timer is a TBC (MCP7940M?)
 
 Written by Cole Perera for Sheffield Formula Racing 2025
+This software was written by humans and is licensed under GNU General Public License v3.0. See LICENSE.txt for more details.
 */
 
 #include "I2C.h"
