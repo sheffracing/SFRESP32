@@ -20,6 +20,7 @@
 #include "main.h"
 #include "CAN/canDecodeAuto.h"
 #include "mcp320X.h"
+#include "LTC6811.h"
 
 /* --------------------------- Function prototypes ----------------------------- */
 void task_BG(void);

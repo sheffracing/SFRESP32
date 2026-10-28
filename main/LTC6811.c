@@ -13,16 +13,18 @@ Written by Cole Perera for Sheffield Formula Racing 2026
 /* --------------------------- Local Variables ------------------------ */
 
 
-/* --------------------------- Global Variables ----------------------- */
-
-
 /* --------------------------- Definitions ---------------------------- */
 #define LTC6811_SPI_FREQ 1000000 // 1 MHz
 #define CELL_VOLTAGE_MIN 2.5f // Minimum cell voltage in volts
 #define CELL_VOLTAGE_MAX 4.3f // Maximum cell voltage in volts
-#define NUM_DEVICES 2 // Number of LTC6811 devices in the stack
 #define BYTES_PER_DEVICE 8 // Number of bytes per device 2 PEC + 6 Data
 #define BYTES_PER_REGISTER 6 // Number of bytes per register group
+
+/* --------------------------- Global Variables ----------------------- */
+uint16_t aVCell[NUM_DEVICES * CELLS_PER_DEVICE];
+uint16_t tSinceVCellms[NUM_DEVICES * CELLS_PER_DEVICE]; //ms
+float aVCellActual[NUM_DEVICES * CELLS_PER_DEVICE];
+
 
 /* --------------------------- Functions ------------------------------ */
 esp_err_t LTC6811_init(uint8_t NCSPin, spi_device_handle_t stDeviceHandle)
@@ -42,7 +44,7 @@ esp_err_t LTC6811_init(uint8_t NCSPin, spi_device_handle_t stDeviceHandle)
     *===========================================================================
     */
     esp_err_t eStatus = ESP_OK;
-    uint8_t aNData[2 + BYTES_PER_REGISTER * NUM_DEVICES]; 
+    uint8_t aNData[BYTES_PER_REGISTER * NUM_DEVICES]; 
     uint16_t NVUV;
     uint16_t NVOV;
     uint16_t NCounter;
@@ -77,10 +79,7 @@ esp_err_t LTC6811_init(uint8_t NCSPin, spi_device_handle_t stDeviceHandle)
         memcpy(&aNData[NCounter * BYTES_PER_REGISTER], &aNData[0], BYTES_PER_REGISTER);
     }
 
-    aNData[BYTES_PER_REGISTER * NUM_DEVICES]      = WRCFGA & 0xFF;
-    aNData[BYTES_PER_REGISTER * NUM_DEVICES + 1]  = WRCFGA << 8 & 0xFF;
-
-    BC_Write(stDeviceHandle, WRCFGA, (2 + BYTES_PER_REGISTER * NUM_DEVICES), &aNData);
+    BC_Write(stDeviceHandle, WRCFGA, (BYTES_PER_REGISTER * NUM_DEVICES), &aNData);
     return eStatus;
 }
 
@@ -197,6 +196,29 @@ esp_err_t BC_Read(spi_device_handle_t stDeviceHandle, uint16_t CMD, uint16_t NBy
         NOffset = NCounter + 2 * (NCounter / BYTES_PER_DEVICE);
         memcpy(&aData[NCounter], &NDataRx[NOffset], BYTES_PER_DEVICE);
     }
+
+    return eStatus;
+}
+
+esp_err_t read_VCell(spi_device_handle_t stDeviceHandle)
+{
+    /*
+    *===========================================================================
+    *   read_VCell
+    *   Takes:   stDeviceHandle - SPI device handle for LTC6811
+    *            
+    * 
+    *   Returns: ESP_OK if successful, error code if not.
+    * 
+    *   Reads the cell voltages from the LTC6811 devices. Stores voltages in the global array aVCell in millivolts.
+    *===========================================================================
+    *   Revision History:
+    *   27/10/26 CP Initial Version
+    *
+    *===========================================================================
+    */
+    esp_err_t eStatus = ESP_OK;
+
 
     return eStatus;
 }
