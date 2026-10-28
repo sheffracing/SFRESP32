@@ -7,13 +7,13 @@ This software was written by humans and is licensed under GNU General Public Lic
 */
 
 #include "sdcard.h"
-
+#ifdef SPI_SD_CS
 /* --------------------------- Global Variables ----------------------------- */
 static const char *SD_MOUNT_POINT = "/sdcard";
 static char abyFilePath[64] = "/sdcard/log000.bin";
 
 /* --------------------------- Local Variables ------------------------------ */
-extern dword dwTimeSincePowerUpms;
+extern uint32_t tSincePowerUpms;
 FILE *stFile;
 
 /* --------------------------- Function prototypes -------------------------- */
@@ -30,7 +30,7 @@ esp_err_t sdcard_empty_buffer(void);
 #define MAX_WRITES_PER_CALL 50
 
 typedef struct __attribute__((packed)) {
-    byte     type;
+    uint8_t     type;
     uint32_t dwTimestamp;
     uint16_t dwID;
     uint8_t  byDLC;
@@ -117,14 +117,14 @@ esp_err_t SD_card_init(void)
     }
     struct dirent *stDirInfo;
     stDirInfo = readdir(stDirectory);
-    word wNLastFile = 0;
+    uint16_t NLastFile = 0;
     while (stDirInfo != NULL)
     {
-        wNLastFile++;
+        NLastFile++;
         stDirInfo = readdir(stDirectory);
     }
     closedir(stDirectory);
-    snprintf(abyFilePath, sizeof(abyFilePath), "%s/log%03d.bin", SD_MOUNT_POINT, (int)wNLastFile);
+    snprintf(abyFilePath, sizeof(abyFilePath), "%s/log%03d.bin", SD_MOUNT_POINT, (int)NLastFile);
     stFile = fopen(abyFilePath, "ab");
     
     if (stFile != NULL)
@@ -133,9 +133,9 @@ esp_err_t SD_card_init(void)
         setvbuf(stFile, acBuffer, _IOFBF, sizeof(acBuffer));
     }
 
-    byte byFileSpecVersion = FILE_SPEC_VERSION;
-    byte abyTimeData[6] = {0};
-    byte abReserved[9] = {0};
+    uint8_t byFileSpecVersion = FILE_SPEC_VERSION;
+    uint8_t abyTimeData[6] = {0};
+    uint8_t abReserved[9] = {0};
     fwrite(&byFileSpecVersion, sizeof(byFileSpecVersion), 1, stFile);
     fwrite(&abyTimeData, sizeof(abyTimeData), 1, stFile);
     fwrite(&abReserved, sizeof(abReserved), 1, stFile);
@@ -168,7 +168,7 @@ esp_err_t sdcard_empty_buffer(void)
 
     CAN_frame_t stCANFrame; 
     BinLogEntry_t stLogEntry;
-    word wNWrites = 0;
+    uint16_t NWrites = 0;
 
     if (!xCANRingBuffer) 
     {
@@ -187,11 +187,11 @@ esp_err_t sdcard_empty_buffer(void)
 
     /* Until the ring buffer is empty, write lines to file */ 
     while (xQueueReceive(xCANRingBuffer, &stCANFrame, 0) == pdTRUE
-           && wNWrites < MAX_WRITES_PER_CALL)
+           && NWrites < MAX_WRITES_PER_CALL)
     {
-        wNWrites++;
+        NWrites++;
         stLogEntry.type = CAN;
-        stLogEntry.dwTimestamp = dwTimeSincePowerUpms;
+        stLogEntry.dwTimestamp = tSincePowerUpms;
         stLogEntry.dwID = stCANFrame.dwID;
         stLogEntry.byDLC = stCANFrame.byDLC;
         memcpy(stLogEntry.abData, stCANFrame.abData, 8);
@@ -199,3 +199,5 @@ esp_err_t sdcard_empty_buffer(void)
     }
     return ESP_OK;
 }
+
+#endif

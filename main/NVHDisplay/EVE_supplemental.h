@@ -40,6 +40,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #ifndef EVE_SUPPLEMENTAL_H
 #define EVE_SUPPLEMENTAL_H
+#ifdef EVE_CS
 
 #include "EVE.h"
 #include "EVE_commands.h"
@@ -58,3 +59,5 @@ void EVE_calibrate_read(uint32_t * const p_tta, uint32_t * const p_ttb, uint32_t
 void EVE_calibrate_manual(const uint16_t width, const uint16_t height);
 
 #endif /* EVE_SUPPLEMENTAL_H */
+
+#endif

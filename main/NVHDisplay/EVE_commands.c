@@ -215,6 +215,7 @@ without the traling _burst in the name when exceution speed is not an issue - e.
 
 #include "EVE_commands.h"
 #include "esp_log.h"
+#ifdef EVE_CS
 
 /* EVE Memory Commands - used with EVE_memWritexx and EVE_memReadxx */
 #define MEM_WRITE 0x80U /* EVE Host Memory Write */
@@ -5022,3 +5023,5 @@ void EVE_vertex_translate_y_burst(const int32_t yco)
 {
     spi_transmit_burst(VERTEX_TRANSLATE_Y(yco));
 }
+
+#endif

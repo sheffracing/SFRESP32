@@ -42,6 +42,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
 #include "EVE_supplemental.h"
+#ifdef EVE_CS
 
 /* define NULL if it not already is */
 #ifndef NULL
@@ -319,3 +320,5 @@ void EVE_calibrate_manual(const uint16_t width, const uint16_t height)
     EVE_memWrite32(REG_TOUCH_TRANSFORM_E, i32_to_u32(trans_matrix[4U]));
     EVE_memWrite32(REG_TOUCH_TRANSFORM_F, i32_to_u32(trans_matrix[5U]));
 }
+
+#endif

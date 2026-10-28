@@ -20,7 +20,7 @@ twai_node_handle_t stCANBus1;
 
 QueueHandle_t xCANRingBuffer = NULL;
 extern QueueHandle_t xESPNOWRingBuffer;
-dword dwNDroppedCANFrames = 0;
+uint32_t NDroppedCANFrames = 0;
 
 /* --------------------------- Definitions ---------------------------------- */
 #define CAN0_BITRATE 1000000  // 1000kbps
@@ -39,13 +39,13 @@ typedef struct {
 } can_tx_buffer_t;
 
 /* --------------------------- Local Variables ------------------------------ */
-extern dword adwMaxTaskTime[eTASK_TOTAL];
+extern uint32_t atTaskMax[eTASK_TOTAL];
 static can_tx_buffer_t astCANTxPool[MAX_CAN_TXS_PER_CALL];
 static uint8_t byCANTxPoolIndex = 0;
-extern qword dwFirmwareSize;
+extern uint64_t NFirmwareSize;
 
 /* --------------------------- Functions ------------------------------------ */
-esp_err_t CAN_init(boolean bEnableRx)
+esp_err_t CAN_init(bool bEnableRx)
 {
     /*
     *===========================================================================
@@ -176,7 +176,7 @@ esp_err_t CAN_transmit(twai_node_handle_t stCANBus, const CAN_frame_t *stFrame)
 
     esp_err_t stState;
     can_tx_buffer_t *stCANTxBuffer = &astCANTxPool[byCANTxPoolIndex];
-    boolean BExtendedID = FALSE;
+    bool BExtendedID = FALSE;
 
     if (!stCANBus) 
     {
@@ -356,10 +356,10 @@ bool CAN_receive_callback(twai_node_handle_t stCANBus, const twai_rx_done_event_
 
     esp_err_t stState;
     CAN_frame_t stRxedFrame;
-    uint8_t abyRxBuffer[8];
+    uint8_t aRxBuffer[8];
     twai_frame_t stRxFrame = {
-        .buffer = abyRxBuffer,
-        .buffer_len = sizeof(abyRxBuffer),
+        .buffer = aRxBuffer,
+        .buffer_len = sizeof(aRxBuffer),
     };
     
     stState = twai_node_receive_from_isr(stCANBus, &stRxFrame);
@@ -376,8 +376,8 @@ bool CAN_receive_callback(twai_node_handle_t stCANBus, const twai_rx_done_event_
     }
 
     /* Copy frame into buffer */
-    stRxedFrame.dwID = (dword)stRxFrame.header.id;
-    stRxedFrame.byDLC = (byte)stRxFrame.header.dlc;
+    stRxedFrame.dwID = (uint32_t)stRxFrame.header.id;
+    stRxedFrame.byDLC = (uint8_t)stRxFrame.header.dlc;
     if (stRxedFrame.byDLC > 0)
     {
         memcpy(stRxedFrame.abData, stRxFrame.buffer, stRxFrame.header.dlc);
@@ -386,7 +386,7 @@ bool CAN_receive_callback(twai_node_handle_t stCANBus, const twai_rx_done_event_
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     if (xQueueSendFromISR(xCANRingBuffer, &stRxedFrame, &xHigherPriorityTaskWoken) != pdTRUE) {
         /* Queue Full */
-        dwNDroppedCANFrames++;
+        NDroppedCANFrames++;
         return FALSE;
     }
     return TRUE;
@@ -416,10 +416,10 @@ bool CAN_receive_callback_no_queue(twai_node_handle_t stCANBus, const twai_rx_do
     */
 
     esp_err_t stState;
-    uint8_t abyRxBuffer[8];
+    uint8_t aRxBuffer[8];
     twai_frame_t stRxFrame = {
-        .buffer = abyRxBuffer,
-        .buffer_len = sizeof(abyRxBuffer),
+        .buffer = aRxBuffer,
+        .buffer_len = sizeof(aRxBuffer),
     };
     
     stState = twai_node_receive_from_isr(stCANBus, &stRxFrame);
@@ -453,7 +453,7 @@ esp_err_t CAN_empty_ESPNOW_buffer(twai_node_handle_t stCANBus)
     */
 
     esp_err_t eStatus = ESP_OK;
-    word wCounter = 0;
+    uint16_t NCounter = 0;
     CAN_frame_t stCANFrame;   
 
     if (!xESPNOWRingBuffer) 
@@ -463,7 +463,7 @@ esp_err_t CAN_empty_ESPNOW_buffer(twai_node_handle_t stCANBus)
     }
 
     /* Until the queue is empty or the max number of messages is reached, send CAN messages */ 
-    while (wCounter < MAX_CAN_TXS_PER_CALL && 
+    while (NCounter < MAX_CAN_TXS_PER_CALL && 
             xQueueReceive(xESPNOWRingBuffer, &stCANFrame, 0) == pdTRUE) 
     {    
         eStatus = CAN_transmit(stCANBus, &stCANFrame);  
@@ -472,7 +472,7 @@ esp_err_t CAN_empty_ESPNOW_buffer(twai_node_handle_t stCANBus)
             ESP_LOGI("CAN", "Failed to transmit CAN frame : %s", esp_err_to_name(eStatus));
             return eStatus;
         }
-        wCounter++;
+        NCounter++;
     }
     
     return eStatus;
@@ -504,9 +504,9 @@ void CAN_CMD_response(twai_frame_t stRxFrame)
                 esp_restart();
                 break;
             case eCMD_CLEAR_MINMAX:
-                for (word wNCounter = 0; wNCounter < eTASK_TOTAL; wNCounter++)
+                for (uint16_t NCounter = 0; NCounter < eTASK_TOTAL; NCounter++)
                 {
-                    adwMaxTaskTime[wNCounter] = 0;
+                    atTaskMax[NCounter] = 0;
                 }
                 break;
             case eCMD_CLEAR_ERRORS:
@@ -518,10 +518,10 @@ void CAN_CMD_response(twai_frame_t stRxFrame)
                     /* Not enough data for reflash command, ignore */
                     break;
                 }
-                dwFirmwareSize = ((dword)stRxFrame.buffer[2] << 24) |
-                                 ((dword)stRxFrame.buffer[3] << 16) |
-                                 ((dword)stRxFrame.buffer[4] << 8)  |
-                                 ((dword)stRxFrame.buffer[5]);
+                NFirmwareSize = ((uint32_t)stRxFrame.buffer[2] << 24) |
+                                 ((uint32_t)stRxFrame.buffer[3] << 16) |
+                                 ((uint32_t)stRxFrame.buffer[4] << 8)  |
+                                 ((uint32_t)stRxFrame.buffer[5]);
                 set_device_mode(eREFLASH);
                 break;
             case eCMD_NORMAL_MODE:
@@ -576,9 +576,9 @@ esp_err_t CAN_Tx_killlevel(KillLevel_t eKillLevel, KillSource_t eKillSource)
     CAN_frame_t stCANFrame;
     stCANFrame.dwID = KILL_MSG_ID;
     stCANFrame.byDLC = 3;
-    stCANFrame.abData[0] = (byte)eKillLevel;
-    stCANFrame.abData[1] = (byte)eKillSource;
-    stCANFrame.abData[2] = (byte)((stCANFrame.abData[0] + stCANFrame.abData[1]) % 256); // Checksum
+    stCANFrame.abData[0] = (uint8_t)eKillLevel;
+    stCANFrame.abData[1] = (uint8_t)eKillSource;
+    stCANFrame.abData[2] = (uint8_t)((stCANFrame.abData[0] + stCANFrame.abData[1]) % 256); // Checksum
     eStatus = CAN_transmit(stCANBus0, &stCANFrame);
     return eStatus;
 }

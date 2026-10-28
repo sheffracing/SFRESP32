@@ -21,7 +21,7 @@ typedef enum {
     eCMD_NORMAL_MODE    = 0b00010000,
 } eCAN_CMD_t;
 
-esp_err_t CAN_init(boolean bEnableRx);
+esp_err_t CAN_init(bool bEnableRx);
 esp_err_t CAN_transmit(twai_node_handle_t stCANBus, const CAN_frame_t *stFrame);
 bool CAN_receive_callback(twai_node_handle_t stCANBus, const twai_rx_done_event_data_t *edata, void *stRxCallback);
 esp_err_t CAN_receive_debug();

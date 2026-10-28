@@ -9,7 +9,7 @@
 #include "esp_err.h"
 #include "esp_log.h"
 
-/* Refer to Device Datasheet for more information on the LTC6811-1 */:
+/* Refer to Device Datasheet for more information on the LTC6811-1
 https://www.analog.com/media/en/technical-documentation/data-sheets/LTC6811-1-6811-2.pdf
 Command codes page 61
 */
@@ -18,6 +18,7 @@ Command codes page 61
 esp_err_t LTC6811_init(uint8_t NCSPin, spi_device_handle_t stDeviceHandle);
 esp_err_t BC_Write(spi_device_handle_t stDeviceHandle, uint16_t CMD, uint16_t NBytes, uint8_t *aData);
 esp_err_t BC_Read(spi_device_handle_t stDeviceHandle, uint16_t CMD, uint16_t NBytes, uint8_t *aData);
+uint32_t PEC15_calc(uint8_t NLen, uint8_t *pData);
 
 /* Global Variables */
 extern uint16_t aVCell[];
@@ -27,7 +28,7 @@ extern float aVCellActual[];
 
 /* --------------------------- Custom Codes -------------------------- */
 #define CFGR0  0b00000100 // Configuration Register Group 0 Defaults (REFON = 1)
-#define CELLS_PER_DEVICE 9 // Number of cells per LTC6811 device
+#define CELLS_PER_DEVICE 11 // Number of cells per LTC6811 device
 #define NUM_DEVICES 2 // Number of LTC6811 devices in the stack
 
 /* --------------------------- Command Codes -------------------------- */

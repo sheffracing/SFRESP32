@@ -19,6 +19,10 @@ Written by Cole Perera for Sheffield Formula Racing 2026
 #define CELL_VOLTAGE_MAX 4.3f // Maximum cell voltage in volts
 #define BYTES_PER_DEVICE 8 // Number of bytes per device 2 PEC + 6 Data
 #define BYTES_PER_REGISTER 6 // Number of bytes per register group
+#define CELLS_PER_GROUP 3 // Number of cells per register group
+#define VUV 0x0000 // Under voltage threshold
+#define VOV 0x0000 // Over voltage threshold
+#define CRC15_POLYNOMIAL 0 //Chcek PEC calculation in general
 
 /* --------------------------- Global Variables ----------------------- */
 uint16_t aVCell[NUM_DEVICES * CELLS_PER_DEVICE];
@@ -45,8 +49,8 @@ esp_err_t LTC6811_init(uint8_t NCSPin, spi_device_handle_t stDeviceHandle)
     */
     esp_err_t eStatus = ESP_OK;
     uint8_t aNData[BYTES_PER_REGISTER * NUM_DEVICES]; 
-    uint16_t NVUV;
-    uint16_t NVOV;
+    uint16_t NVUV = 0;
+    uint16_t NVOV = 0;
     uint16_t NCounter;
     spi_device_interface_config_t stDeviceConfig = 
     {
@@ -68,9 +72,9 @@ esp_err_t LTC6811_init(uint8_t NCSPin, spi_device_handle_t stDeviceHandle)
 
     /* Initialise LTC6811 Devices */
     aNData[5] = CFGR0;
-    aNData[4] = VUV & 0xFF;
-    aNData[3] = ((VUV >> 8) & 0xF) | ((VOV & 0xF) << 4);
-    aNData[2] = (VOV >> 4) & 0xFF;
+    aNData[4] = NVUV & 0xFF;
+    aNData[3] = ((NVUV >> 8) & 0xF) | ((NVOV & 0xF) << 4);
+    aNData[2] = (NVOV >> 4) & 0xFF;
     aNData[1] = 0x00;
     aNData[0] = 0x00; 
 
@@ -79,7 +83,7 @@ esp_err_t LTC6811_init(uint8_t NCSPin, spi_device_handle_t stDeviceHandle)
         memcpy(&aNData[NCounter * BYTES_PER_REGISTER], &aNData[0], BYTES_PER_REGISTER);
     }
 
-    BC_Write(stDeviceHandle, WRCFGA, (BYTES_PER_REGISTER * NUM_DEVICES), &aNData);
+    BC_Write(stDeviceHandle, WRCFGA, (BYTES_PER_REGISTER * NUM_DEVICES), aNData);
     return eStatus;
 }
 
@@ -103,7 +107,7 @@ esp_err_t BC_Write(spi_device_handle_t stDeviceHandle, uint16_t CMD, uint16_t NB
     */
     esp_err_t eStatus = ESP_OK;
     spi_transaction_t stSPICall;
-    word wNData;
+    uint32_t NPEC;
     uint16_t NCounter;
     uint16_t NOffset = 0;
     uint8_t NDataTx[4 + NBytes + 2 * (NBytes / BYTES_PER_REGISTER)]; // 2 CMD, 2 PEC, NBytes data, 2 PEC for every 6 bytes of data
@@ -119,13 +123,14 @@ esp_err_t BC_Write(spi_device_handle_t stDeviceHandle, uint16_t CMD, uint16_t NB
         NDataTx[NOffset + BYTES_PER_REGISTER + 1] = PEC15_calc(BYTES_PER_REGISTER, &aData[NCounter]) & 0xFF;
     }
 
-    /* 2 Byte PEC for the command */
-    NDataTx[NBytes + 0] = (PEC15_calc(2, CMD) >> 8) & 0xFF;
-    NDataTx[NBytes + 1] = PEC15_calc(2, CMD) & 0xFF;
-
     /* 2 Byte Command */
     NDataTx[NBytes + 2] = (CMD >> 8) & 0xFF;
     NDataTx[NBytes + 3] = CMD & 0xFF;
+
+    /* 2 Byte PEC for the command */
+    NPEC = PEC15_calc(2, &NDataTx[NBytes + 2]);
+    NDataTx[NBytes + 0] = (NPEC >> 8) & 0xFF;
+    NDataTx[NBytes + 1] = NPEC & 0xFF;
 
     /* Transmit */
     memset(&stSPICall, 0, sizeof(stSPICall));
@@ -155,20 +160,22 @@ esp_err_t BC_Read(spi_device_handle_t stDeviceHandle, uint16_t CMD, uint16_t NBy
     */
     esp_err_t eStatus = ESP_OK;
     spi_transaction_t stSPICall;
-    word wNData;
     uint16_t NCounter;
+    uint32_t NPEC;
     uint16_t NOffset = 0;
     uint8_t NDataTx[4]; // 2 CMD, 2 PEC
     uint8_t NDataRx[NBytes + 2 * (NBytes / BYTES_PER_REGISTER)]; // 2 bytes PEC for every 8 bytes of data
     uint16_t NRxPEC;
 
-    /* 2 Byte PEC */
-    NDataTx[0] = (PEC15_calc(2, &NDataTx) >> 8) & 0xFF; // Calculate PEC for command
-    NDataTx[1] = PEC15_calc(2, &NDataTx) & 0xFF;
     
     /* 2 Byte Command */
     NDataTx[2] = (CMD >> 8) & 0xFF;
     NDataTx[3] = CMD & 0xFF;
+
+    /* 2 Byte PEC for the command */
+    NPEC = PEC15_calc(2, &NDataTx[2]);
+    NDataTx[0] = (NPEC >> 8) & 0xFF;
+    NDataTx[1] = NPEC & 0xFF;
 
     memset(&stSPICall, 0, sizeof(stSPICall));
     stSPICall.length = 8 * (4 + NBytes + 2 * (NBytes / BYTES_PER_REGISTER));
@@ -200,17 +207,17 @@ esp_err_t BC_Read(spi_device_handle_t stDeviceHandle, uint16_t CMD, uint16_t NBy
     return eStatus;
 }
 
-esp_err_t read_VCell(spi_device_handle_t stDeviceHandle)
+esp_err_t read_VCell(spi_device_handle_t stDeviceHandle, uint16_t NCMD)
 {
     /*
     *===========================================================================
     *   read_VCell
     *   Takes:   stDeviceHandle - SPI device handle for LTC6811
+    *            NCMD - Command to send to the LTC6811
     *            
-    * 
     *   Returns: ESP_OK if successful, error code if not.
     * 
-    *   Reads the cell voltages from the LTC6811 devices. Stores voltages in the global array aVCell in millivolts.
+    *   Reads the cell voltages from the LTC6811 devices. Stores voltages in the global array aVCell.
     *===========================================================================
     *   Revision History:
     *   27/10/26 CP Initial Version
@@ -218,7 +225,88 @@ esp_err_t read_VCell(spi_device_handle_t stDeviceHandle)
     *===========================================================================
     */
     esp_err_t eStatus = ESP_OK;
+    uint8_t aNData[BYTES_PER_REGISTER * NUM_DEVICES];
+    uint8_t NGroup;
+    uint16_t aVCells[3];
 
+    /* Extract the cell group */
+    switch (NCMD)
+    {
+        case RDCVA:
+            NGroup = 0;
+            break;
+        case RDCVB:
+            NGroup = 1;
+            break;
+        case RDCVC:
+            NGroup = 2;
+            break;
+        case RDCVD:
+            NGroup = 3;
+            break;
+        default:
+            return ESP_ERR_INVALID_ARG;
+    }
+
+    /* Read the cell voltages registers */
+    eStatus = BC_Read(stDeviceHandle, NCMD, BYTES_PER_REGISTER * NUM_DEVICES, aNData);
+
+    if (eStatus != ESP_OK) { return eStatus; }
+
+    /* Data ok, copy to global array */
+    for (uint16_t NCounter = 0; NCounter < NUM_DEVICES; NCounter++)
+    {
+        aVCells[0] = (aNData[BYTES_PER_REGISTER * NCounter + 0] >> 0) | (aNData[BYTES_PER_REGISTER * NCounter + 1] << 8);
+        aVCells[1] = (aNData[BYTES_PER_REGISTER * NCounter + 2] >> 0) | (aNData[BYTES_PER_REGISTER * NCounter + 3] << 8);
+        aVCells[2] = (aNData[BYTES_PER_REGISTER * NCounter + 4] >> 0) | (aNData[BYTES_PER_REGISTER * NCounter + 5] << 8);
+        
+        aVCell[NCounter * CELLS_PER_DEVICE + NGroup * CELLS_PER_GROUP + 0] = aVCells[0];
+        aVCell[NCounter * CELLS_PER_DEVICE + NGroup * CELLS_PER_GROUP + 1] = aVCells[1];
+        aVCell[NCounter * CELLS_PER_DEVICE + NGroup * CELLS_PER_GROUP + 2] = aVCells[2];
+
+        tSinceVCellms[NCounter * CELLS_PER_DEVICE + NGroup * CELLS_PER_GROUP + 0] = 0;
+        tSinceVCellms[NCounter * CELLS_PER_DEVICE + NGroup * CELLS_PER_GROUP + 1] = 0;
+        tSinceVCellms[NCounter * CELLS_PER_DEVICE + NGroup * CELLS_PER_GROUP + 2] = 0;
+    }
 
     return eStatus;
+}
+
+uint32_t PEC15_calc(uint8_t NLen, uint8_t *pData)
+{
+    /*
+    *===========================================================================
+    *   PEC15_calc
+    *   Takes:   NLen - Length of data to calculate PEC for
+    *            pData - Pointer to data to calculate PEC for
+    * 
+    *   Returns: 15-bit PEC value
+    * 
+    *   Calculates the 15-bit Packet Error Code (PEC) for the given data.
+    *===========================================================================
+    *   Revision History:
+    *   23/10/26 CP Initial Version
+    *
+    *===========================================================================
+    */
+    uint16_t NCRC = 0;
+    uint16_t NCounter;
+    
+    for (NCounter = 0; NCounter < NLen; NCounter++)
+    {
+        NCRC ^= ((uint16_t)pData[NCounter] << 7);
+        for (uint8_t i = 0; i < 8; i++)
+        {
+            if (NCRC & 0x4000)
+            {
+                NCRC = (NCRC << 1) ^ CRC15_POLYNOMIAL;
+            }
+            else
+            {
+                NCRC <<= 1;
+            }
+        }
+    }
+    
+    return (NCRC & 0x7FFF);
 }

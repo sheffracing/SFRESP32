@@ -21,10 +21,10 @@ extern eChipMode_t eDeviceMode;
 static esp_partition_t *stOTAPartition = NULL;
 
 /* --------------------------- Global Variables ----------------------------- */
-dword adwMaxTaskTime[eTASK_TOTAL];
-dword adwLastTaskTime[eTASK_TOTAL];
+uint32_t atTaskMax[eTASK_TOTAL];
+uint32_t atTaskLast[eTASK_TOTAL];
 eTaskState_t astTaskState[eTASK_TOTAL];
-dword dwTimeSincePowerUpms = 0;
+uint32_t tSincePowerUpms = 0;
 
 /* --------------------------- Definitions ----------------------------- */
 #define PERIOD_TASK_100MS 100   // ms
@@ -36,16 +36,16 @@ dword dwTimeSincePowerUpms = 0;
 /* Background task that runs as often as processor time is available. */
 void task_BG(void)
 { 
-    static qword qwtTaskTimer;
-    qwtTaskTimer = esp_timer_get_time();
+    static uint64_t tTaskTimer;
+    tTaskTimer = esp_timer_get_time();
     astTaskState[eTASK_BG] = eTASK_ACTIVE;
 
     /* Service the watchdog if all task have been completed at least once */
-    word wNTaskCounter = 0;
-    boolean bTasksComplete = TRUE;
-    for (wNTaskCounter = 0; wNTaskCounter < eTASK_TOTAL; wNTaskCounter++)
+    uint16_t NTaskCounter = 0;
+    bool bTasksComplete = TRUE;
+    for (NTaskCounter = 0; NTaskCounter < eTASK_TOTAL; NTaskCounter++)
     {
-        if (astTaskState[wNTaskCounter] == eTASK_INACTIVE) {
+        if (astTaskState[NTaskCounter] == eTASK_INACTIVE) {
             bTasksComplete = FALSE;
             break;
         }
@@ -54,44 +54,44 @@ void task_BG(void)
         /* Reset the watchdog timer */
         (void)esp_task_wdt_reset();           
         
-        for (wNTaskCounter = 0; wNTaskCounter < eTASK_TOTAL; wNTaskCounter++)
+        for (NTaskCounter = 0; NTaskCounter < eTASK_TOTAL; NTaskCounter++)
         {
-            astTaskState[wNTaskCounter] = eTASK_INACTIVE;
+            astTaskState[NTaskCounter] = eTASK_INACTIVE;
         }
     }
 
     /* Update max task time */
-    qwtTaskTimer = esp_timer_get_time() - qwtTaskTimer;
-    adwLastTaskTime[eTASK_BG] = (dword)qwtTaskTimer;
-    if (qwtTaskTimer > adwMaxTaskTime[eTASK_BG]) {
-        adwMaxTaskTime[eTASK_BG] = (dword)qwtTaskTimer;
+    tTaskTimer = esp_timer_get_time() - tTaskTimer;
+    atTaskLast[eTASK_BG] = (uint32_t)tTaskTimer;
+    if (tTaskTimer > atTaskMax[eTASK_BG]) {
+        atTaskMax[eTASK_BG] = (uint32_t)tTaskTimer;
     }
 }
 
 /* Task that runs every 1ms. */
 void task_1ms(void)
 {
-    qword qwtTaskTimer;
+    uint64_t tTaskTimer;
 
-    qwtTaskTimer = esp_timer_get_time();
+    tTaskTimer = esp_timer_get_time();
     astTaskState[eTASK_1MS] = eTASK_ACTIVE;
 
     /* CAN error handling */
     CANRxCheck1ms();
 
     /* Update time since power up */
-    dwTimeSincePowerUpms++;
+    tSincePowerUpms++;
     for (uint16_t NCoutner = 0; NCoutner < NUM_DEVICES * CELLS_PER_DEVICE; NCoutner++)
     {
         tSinceVCellms[NCoutner]++;
     }
 
     /* Update max task time */
-    qwtTaskTimer = esp_timer_get_time() - qwtTaskTimer;
-    adwLastTaskTime[eTASK_1MS] = (dword)qwtTaskTimer;
-    if (qwtTaskTimer > adwMaxTaskTime[eTASK_1MS]) 
+    tTaskTimer = esp_timer_get_time() - tTaskTimer;
+    atTaskLast[eTASK_1MS] = (uint32_t)tTaskTimer;
+    if (tTaskTimer > atTaskMax[eTASK_1MS]) 
     {
-        adwMaxTaskTime[eTASK_1MS] = (dword)qwtTaskTimer;
+        atTaskMax[eTASK_1MS] = (uint32_t)tTaskTimer;
     }
 }
 
@@ -99,20 +99,20 @@ void task_1ms(void)
 void task_100ms(void)
 {
     
-    static qword qwtTaskTimer;
-    static word wNCounter;
+    static uint64_t tTaskTimer;
+    static uint16_t NCounter;
 
-    qwtTaskTimer = esp_timer_get_time();
+    tTaskTimer = esp_timer_get_time();
     astTaskState[eTASK_100MS] = eTASK_ACTIVE;
 
     /* CAN error handling */
     CANRxCheck1ms();
 
     /* Every Second */
-    if ( wNCounter % (PERIOD_1S / PERIOD_TASK_100MS) == 0 ) 
+    if ( NCounter % (PERIOD_1S / PERIOD_TASK_100MS) == 0 ) 
     {
         /* Toggle LED */
-        pin_toggle(GPIO_ONBOARD_LED); 
+        pin_toggle(LED1); 
 
         /* Send Status Message */
         /* This is not how you should send a CAN message but in this special case it is better this way */
@@ -121,45 +121,45 @@ void task_100ms(void)
             .dwID = DEVICE_ID,
             .byDLC = 8,
             .abData = {
-                (byte)(adwLastTaskTime[eTASK_1MS] / 50 & 0xFF),          
-                (byte)(adwMaxTaskTime[eTASK_1MS] / 50 & 0xFF),
-                (byte)(adwLastTaskTime[eTASK_100MS] / 500 & 0xFF),       
-                (byte)(adwMaxTaskTime[eTASK_100MS] / 500 & 0xFF),
-                (byte)(adwLastTaskTime[eTASK_BG] / 500 & 0xFF),        
-                (byte)(adwMaxTaskTime[eTASK_BG] / 500 & 0xFF),
-                (byte)((dwTimeSincePowerUpms/4000) >> 4 & 0xFF),
-                (byte)(((dwTimeSincePowerUpms/4000) & 0xF) << 4 | (eResetReason & 0x0F)),
+                (uint8_t)(atTaskLast[eTASK_1MS] / 50 & 0xFF),          
+                (uint8_t)(atTaskMax[eTASK_1MS] / 50 & 0xFF),
+                (uint8_t)(atTaskLast[eTASK_100MS] / 500 & 0xFF),       
+                (uint8_t)(atTaskMax[eTASK_100MS] / 500 & 0xFF),
+                (uint8_t)(atTaskLast[eTASK_BG] / 500 & 0xFF),        
+                (uint8_t)(atTaskMax[eTASK_BG] / 500 & 0xFF),
+                (uint8_t)((tSincePowerUpms/4000) >> 4 & 0xFF),
+                (uint8_t)(((tSincePowerUpms/4000) & 0xF) << 4 | (eResetReason & 0x0F)),
             }
         });
     };
 
     /* Every 10 Seconds */
-    if (wNCounter >= PERIOD_10S / PERIOD_TASK_100MS)
+    if (NCounter >= PERIOD_10S / PERIOD_TASK_100MS)
     {
         /* Print the task times */
         #ifdef DEBUG
         ESP_LOGI(SFR_TAG, "Max Task Time: %5d BG %5d 1ms %5d 100ms", 
-            (int)adwMaxTaskTime[eTASK_BG],
-            (int)adwMaxTaskTime[eTASK_1MS],
-            (int)adwMaxTaskTime[eTASK_100MS]);
+            (int)atTaskMax[eTASK_BG],
+            (int)atTaskMax[eTASK_1MS],
+            (int)atTaskMax[eTASK_100MS]);
         ESP_LOGI(SFR_TAG, "Last Task Time: %5d BG %5d 1ms %5d 100ms", 
-            (int)adwLastTaskTime[eTASK_BG], 
-            (int)adwLastTaskTime[eTASK_1MS],
-            (int)adwLastTaskTime[eTASK_100MS]);
-        wNCounter = 0;
+            (int)atTaskLast[eTASK_BG], 
+            (int)atTaskLast[eTASK_1MS],
+            (int)atTaskLast[eTASK_100MS]);
+        NCounter = 0;
         #endif
     }
-    wNCounter++;
+    NCounter++;
 
     /* Check if the CAN bus is in error state and recover */
     CAN_bus_diagnosics();
 
     /* Update max task time */
-    qwtTaskTimer = esp_timer_get_time() - qwtTaskTimer;
-    adwLastTaskTime[eTASK_100MS] = (dword)qwtTaskTimer;
-    if (qwtTaskTimer > adwMaxTaskTime[eTASK_100MS]) 
+    tTaskTimer = esp_timer_get_time() - tTaskTimer;
+    atTaskLast[eTASK_100MS] = (uint32_t)tTaskTimer;
+    if (tTaskTimer > atTaskMax[eTASK_100MS]) 
     {
-        adwMaxTaskTime[eTASK_100MS] = (dword)qwtTaskTimer;
+        atTaskMax[eTASK_100MS] = (uint32_t)tTaskTimer;
     }
 }
 
@@ -172,21 +172,21 @@ void reflash_task_1ms(void)
 /* Task that runs every 100ms in reflash mode */
 void reflash_task_100ms(void)
 {
-    pin_toggle(GPIO_ONBOARD_LED);
+    pin_toggle(LED1);
 }
 
 /* Background task for reflash mode */
 void reflash_task_BG()
 {
-    static qword qwtReflashEntryTime = 0;
+    static uint64_t tReflashEntry = 0;
     esp_err_t eState;
     (void)esp_task_wdt_reset();
 
     /* Initialise Reflash Mode */
-    if (qwtReflashEntryTime == 0)
+    if (tReflashEntry == 0)
     {
-        ESP_LOGI("CANFLASH", "Entering reflash mode with firmware size %d bytes", dwFirmwareSize);
-        qwtReflashEntryTime = (qword)esp_timer_get_time();
+        ESP_LOGI("CANFLASH", "Entering reflash mode with firmware size %d bytes", NFirmwareSize);
+        tReflashEntry = (uint64_t)esp_timer_get_time();
     }
 
     if (stOTAPartition == NULL)
@@ -220,10 +220,10 @@ void reflash_task_BG()
     }
 
     /* If binary fully received then restart */
-    if (dwBytesWrittenReflash >= dwFirmwareSize && dwFirmwareSize > 0)
+    if (NBytesWrittenReflash >= NFirmwareSize && NFirmwareSize > 0)
     {
-        uint32_t dwFlashTime = (uint32_t)((esp_timer_get_time() - qwtReflashEntryTime)/1000000);
-        ESP_LOGI("CANFLASH", "Reflash complete, written %d bytes in %d s", (int)dwBytesWrittenReflash, dwFlashTime);
+        uint32_t dwFlashTime = (uint32_t)((esp_timer_get_time() - tReflashEntry)/1000000);
+        ESP_LOGI("CANFLASH", "Reflash complete, written %d bytes in %d s", (int)NBytesWrittenReflash, dwFlashTime);
         eState = esp_ota_set_boot_partition(stOTAPartition);
         if (eState == ESP_OK) {
             esp_restart();
@@ -234,7 +234,7 @@ void reflash_task_BG()
 
 void pin_toggle(gpio_num_t ePin)
 {
-    static boolean BLEDState = false;
+    static bool BLEDState = false;
     BLEDState = !BLEDState;
     gpio_set_level(ePin, BLEDState);
 }

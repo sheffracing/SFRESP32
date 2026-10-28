@@ -7,7 +7,7 @@ This software was written by humans and is licensed under GNU General Public Lic
 */
 
 #include "NVHDisplay.h"
-
+#ifdef EVE_CS
 /* --------------------------- Definitions ---------------------------------- */
 #define MEM_LOGO 0x000f8000
 #define MEM_PIC1 0x000fa000
@@ -41,13 +41,9 @@ This software was written by humans and is licensed under GNU General Public Lic
 /* --------------------------- Global Variables ----------------------------- */
 
 /* --------------------------- Local Variables ------------------------------ */
-byte byTFTActive = 0;
-dword dwNStaticDisplaySize = 0;
-word wToggleState = 0;
-word wDisplayListSize = 0;
-word wNProfileA = 0;
-word wNProfileB = 0;
-uint32_t colour = GREEN;
+uint8_t byTFTActive = 0;
+uint32_t NStaticDisplaySize = 0;
+uint32_t NColour = GREEN;
 const char* message = "";
 
 /* --------------------------- Screen Variables ------------------------------ */
@@ -176,9 +172,9 @@ void initStaticBackground(void)
 
     EVE_execute_cmd();
 
-    dwNStaticDisplaySize = EVE_memRead16(REG_CMD_DL);
+    NStaticDisplaySize = EVE_memRead16(REG_CMD_DL);
 
-    EVE_cmd_memcpy(MEM_DL_STATIC, EVE_RAM_DL, dwNStaticDisplaySize);
+    EVE_cmd_memcpy(MEM_DL_STATIC, EVE_RAM_DL, NStaticDisplaySize);
     EVE_execute_cmd();
 }
 
@@ -193,36 +189,36 @@ void TFT_display(void)
         EVE_clear_color_rgb(BLACK); /* set the default clear color to white */
         EVE_clear(1, 1, 1); /* clear the screen - this and the previous prevent artifacts between lists, Attributes are the color, stencil and tag buffers */
         EVE_tag(0); /* no touch */
-        EVE_cmd_append(MEM_DL_STATIC, dwNStaticDisplaySize); /* insert static part of display-list from copy in gfx-mem */
+        EVE_cmd_append(MEM_DL_STATIC, NStaticDisplaySize); /* insert static part of display-list from copy in gfx-mem */
 
         if (rSOC < 0.01f && TCellAvg == 0 && Actual_TempMotor < 0.01f && Actual_TempController < 0.01f) {
-            colour = ORANGE;
+            NColour = ORANGE;
             message = "No CAN data!";
         } 
         // Danger messages
         // Low Battery
         else if (rSOC < 20.0f) {
-            colour = RED;
+            NColour = RED;
             message = "Low battery!";
         }
         // High cell temperature
         else if (TCellAvg > CELL_TEMP_WARNING_THRESHOLD) {
-            colour = RED;
+            NColour = RED;
             message = "High cell temp!";
         }
 
         else {
-            colour = GREEN;
+            NColour = GREEN;
             message = " ";
         }
 
         // Status Circles
-        EVE_widget_circle(20, 18, 150, 1, colour);
-        EVE_widget_circle(48, 18, 150, 1, colour);
-        EVE_widget_circle(76, 18, 150, 1, colour);
-        EVE_widget_circle(EVE_VSIZE-20, 18, 150, 1, colour);
-        EVE_widget_circle(EVE_VSIZE-48, 18, 150, 1, colour);
-        EVE_widget_circle(EVE_VSIZE-76, 18, 150, 1, colour);
+        EVE_widget_circle(20, 18, 150, 1, NColour);
+        EVE_widget_circle(48, 18, 150, 1, NColour);
+        EVE_widget_circle(76, 18, 150, 1, NColour);
+        EVE_widget_circle(EVE_VSIZE-20, 18, 150, 1, NColour);
+        EVE_widget_circle(EVE_VSIZE-48, 18, 150, 1, NColour);
+        EVE_widget_circle(EVE_VSIZE-76, 18, 150, 1, NColour);
 
 
         // battery percentage
@@ -258,7 +254,7 @@ void TFT_display(void)
         EVE_cmd_text(EVE_VSIZE/2 - 50, EVE_HSIZE-45, 28, 0, message);  //x, y, font
 
         // Danger warning box
-        if (colour == RED) {
+        if (NColour == RED) {
             EVE_color_rgb(YELLOW);
             EVE_widget_rectangle(EVE_VSIZE/2 - 80, EVE_HSIZE/2 - 30, 160U, 60U, 3, 10, YELLOW);  // yellow border
             EVE_widget_rectangle(EVE_VSIZE/2 - 77, EVE_HSIZE/2 - 27, 154U, 54U, 0, 15, RED);     // red fill
@@ -345,3 +341,5 @@ esp_err_t display_empty_buffer(void)
 
     return NStatus;
 }
+
+#endif

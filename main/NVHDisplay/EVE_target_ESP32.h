@@ -42,6 +42,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 /* Edited for SFR by CPerera */
 
+#ifdef EVE_CS
 #ifndef EVE_TARGET_ESP32_H
 #define EVE_TARGET_ESP32_H
 
@@ -137,3 +138,4 @@ static inline uint8_t fetch_flash_byte(const uint8_t *p_data)
 }
 
 #endif /* EVE_TARGET_STM32_H */
+#endif

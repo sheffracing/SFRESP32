@@ -142,6 +142,7 @@ EVE_cmd_animstartram_burst()
 
 #ifndef EVE_COMMANDS_H
 #define EVE_COMMANDS_H
+#ifdef EVE_CS
 
 #include "EVE.h"
 
@@ -555,3 +556,4 @@ void EVE_vertex_translate_y(const int32_t yco);
 void EVE_vertex_translate_y_burst(const int32_t yco);
 
 #endif /* EVE_COMMANDS_H */
+#endif

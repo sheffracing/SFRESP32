@@ -78,6 +78,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #ifndef EVE_H
 #define EVE_H
+#ifdef EVE_CS
 
 #include "EVE_target_ESP32.h"
 
@@ -1265,3 +1266,4 @@ static inline uint32_t BITMAP_TRANSFORM_E(const uint8_t prc, const uint32_t val)
 #endif
 
 #endif /* EVE_H */
+#endif
