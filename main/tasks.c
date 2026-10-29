@@ -74,6 +74,7 @@ void task_BG(void)
         ESP_LOGE(SFR_TAG, "Failed to empty SD card buffer: %s", esp_err_to_name(eState));
     }
     if (bFlushSDCard && stFile != NULL) {
+        fflush(stFile); //Flush buffer to card once a second if data to prevent data loss if power loss.
         fsync(fileno(stFile));
         bFlushSDCard = FALSE;
     }

@@ -230,7 +230,6 @@ esp_err_t sdcard_empty_buffer(void)
         stLogEntry.byDLC = stCANFrame.byDLC;
         memcpy(stLogEntry.abData, stCANFrame.abData, 8);
         fwrite(&stLogEntry, sizeof(BinLogEntryCan_t), 1, stFile);
-        fflush(stFile); //Here because wont write for some reason without it here, buffer can be more efficient but i cant figure it out. -DH
         //ESP_LOGI("SDCARD", "Wrote CAN frame to log file");
     }
     return ESP_OK;
@@ -264,7 +263,6 @@ esp_err_t sdcard_log_imu(void){
     stLogEntry.type = IMU;
     memcpy(stLogEntry.afData, imuData, sizeof(imuData));
     fwrite(&stLogEntry, sizeof(BinLogEntryIMU_t), 1, stFile);
-    fflush(stFile); //Here because wont write for some reason without it here, buffer can be more efficient but i cant figure it out. -DH
     //ESP_LOGI("SDCARD", "Wrote IMU data to log file");
 
     return ESP_OK;
@@ -299,7 +297,6 @@ esp_err_t sdcard_log_time(void){
     stLogEntry.type = TIME;
     memcpy(stLogEntry.atRealTime, atRealTime, 7);
     fwrite(&stLogEntry, sizeof(BinLogEntryTime_t), 1, stFile);
-    fflush(stFile); //Here because wont write for some reason without it here, buffer can be more efficient but i cant figure it out. -DH
     //ESP_LOGI("SDCARD", "Wrote time to log file");
 
     return ESP_OK;
