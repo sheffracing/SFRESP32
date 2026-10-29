@@ -18,6 +18,8 @@ extern uint8_t byMACAddress[6];
 extern esp_reset_reason_t eResetReason;
 extern eChipMode_t eDeviceMode;
 static esp_partition_t *stOTAPartition = NULL;
+const int samples = 5;
+int low_count = 1;
 
 /* --------------------------- Global Variables ----------------------------- */
 dword adwMaxTaskTime[eTASK_TOTAL];
@@ -27,9 +29,6 @@ dword dwTimeSincePowerUpms = 0;
 
 extern bool BDashSwitchState;
 extern bool BDashButtonState[2];
-bool previous_switch1_state = 0;
-bool previous_button1_state = 0;
-bool previous_button2_state = 0;
 /* --------------------------- Definitions ----------------------------- */
 #define PERIOD_TASK_100MS 100   // ms
 #define PERIOD_10S 10000        // ms
@@ -247,10 +246,19 @@ void pin_toggle(gpio_num_t ePin)
 
 void read_pin()
 {
-    previous_switch1_state = BDashSwitchState;
-    previous_button1_state = BDashButtonState[0];
-    previous_button2_state = BDashButtonState[1];
-    BDashSwitchState = gpio_get_level(GPIO_SWITCH_1_IN);
+    //Implementing software debouncing for dash switch (Unreliable high readings but reliable low readings).
+    low_count = 1;
+    for (int i = 0; i < samples; i++) {
+        if (gpio_get_level(GPIO_SWITCH_1_IN) == 0) {
+            low_count++;
+        }
+    }
+    if (low_count >= samples) {
+        BDashSwitchState = 0; // It's genuinely OFF
+    } else {
+        BDashSwitchState = 1; // It's genuinely ON (ignoring the noise dip)
+        low_count = 1;
+    }
     BDashButtonState[0] = gpio_get_level(GPIO_BUTTON_1_IN);
     BDashButtonState[1] = gpio_get_level(GPIO_BUTTON_2_IN);
 }
