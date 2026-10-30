@@ -122,6 +122,68 @@ esp_err_t adc_register(adc_atten_t eNAtten, adc_unit_t eNUnit, stADCHandles_t *s
     return eStatus;
 }
 
+int adc_read_raw(stADCHandles_t *stADCHandle)
+/*
+*===========================================================================
+*   adc_read_raw
+*   Takes:  stADCHandle: Pointer to ADC handle structure, contains unit and calibration handles
+* 
+*   Returns: raw ADC reading as integer
+* 
+*   Uses the ADC handle to read the level from the specified ADC channel and
+*   returns the level as a 10 bit integer.
+*=========================================================================== 
+*   Revision History:
+*   13/10/26 DH Initial Version
+*
+*===========================================================================
+*/
+{
+    int NVADCRaw = 0;
+    adc_oneshot_read(stADCHandle->stADCUnit, stADCHandle->eNChannel, &NVADCRaw);
+    return NVADCRaw; // Return raw ADC reading
+}
+
+float adc_read_raw_to_percentage(stADCHandles_t *stADCHandle, float min_raw, float max_raw) 
+/*
+*===========================================================================
+*   adc_read_raw_to_percentage
+*   Takes:  stADCHandle: Pointer to ADC handle structure, contains unit and calibration handles
+*           min_raw: Minimum raw ADC value for the sensor
+*           max_raw: Maximum raw ADC value for the sensor
+* 
+*   Returns: Normalised sensor reading as float
+* 
+*   Converts the raw ADC reading to a percentage based on the sensor's range.
+*=========================================================================== 
+*   Revision History:
+*   14/10/26 DH Initial Version
+*
+*===========================================================================
+*/
+{
+    int NVADCRaw = 0;
+    adc_oneshot_read(stADCHandle->stADCUnit, stADCHandle->eNChannel, &NVADCRaw);
+    ESP_LOGI("ADC", "ADC read: %d", NVADCRaw);
+    float actual_min = (min_raw < max_raw) ? min_raw : max_raw;
+    float actual_max = (min_raw > max_raw) ? min_raw : max_raw;
+    //ESP_LOGI(SFR_TAG, "Sensor %f raw value: %f ",stADCHandle->stADCUnit, NVADCRaw);
+    if ((float)NVADCRaw < (actual_min - 5.0f) || (float)NVADCRaw > (actual_max + 5.0f)) {
+        return -999.0f; // Invalid reading
+    }
+
+    // Linear interpolation formula: ((raw - min) / (max - min)) * 100.0
+    float percentage = ((float)NVADCRaw - min_raw) / (max_raw - min_raw) * 100.0f;
+    
+    // Clamp result to valid 0% - 100% range to handle sensor noise
+    if (percentage < 0.0f) {
+        return 0.0f;
+    } else if (percentage > 100.0f) {
+        return 100.0f;
+    }
+    return percentage;
+}
+
 float adc_read_voltage(stADCHandles_t *stADCHandle)
 /*
 *===========================================================================
