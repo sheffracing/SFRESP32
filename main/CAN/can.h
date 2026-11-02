@@ -36,6 +36,8 @@ esp_err_t CAN_read_from_buffer(void);
 
 #define KILL_MSG_ID 0x001
 
+extern QueueHandle_t xCANRingBuffer;
+
 #ifdef GPIO_CAN0_TX
 extern twai_node_handle_t stCANBus0;
 #endif

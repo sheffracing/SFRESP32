@@ -20,7 +20,6 @@ dword dwFirmwareSize = 0;
 
 
 /* --------------------------- Local Variables ------------------------------ */
-extern QueueHandle_t xCANRingBuffer;
 QueueHandle_t xReflashRingBuffer = NULL;
 
 /* Local Function Prototypes */
