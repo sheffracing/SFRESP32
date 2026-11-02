@@ -183,7 +183,7 @@ void task_1ms(void)
 
     if (BThrottleValid)
     {
-        CAN_transmit(stCANBus0, (CAN_frame_t)
+        CAN_transmit(stCANBus0, &(CAN_frame_t)
         {
             .dwID = 0x05,
             .byDLC = 2,
@@ -222,7 +222,7 @@ void task_100ms(void)
     /* If APPS is ok send inverter enable message */
     if (BThrottleValid)
     {
-        CAN_transmit(stCANBus0, (CAN_frame_t)
+        CAN_transmit(stCANBus0, &(CAN_frame_t)
         {
             .dwID = 0x0C,
             .byDLC = 1,
@@ -230,7 +230,7 @@ void task_100ms(void)
         });
     } else
     {
-        CAN_transmit(stCANBus0, (CAN_frame_t)
+        CAN_transmit(stCANBus0, &(CAN_frame_t)
         {
             .dwID = 0x0C,
             .byDLC = 1,
@@ -263,7 +263,7 @@ void task_100ms(void)
         });
 
         /* APPS Status Message */
-        CAN_transmit(stCANBus0, (CAN_frame_t)
+        CAN_transmit(stCANBus0, &(CAN_frame_t)
         {
             .dwID = 0xA0,
             .byDLC = 4,
