@@ -22,7 +22,8 @@ Written by Cole Perera for Sheffield Formula Racing 2026
 #define CELLS_PER_GROUP 3 // Number of cells per register group
 #define VUV 0x0000 // Under voltage threshold
 #define VOV 0x0000 // Over voltage threshold
-#define CRC15_POLYNOMIAL 0 //Chcek PEC calculation in general
+#define PEC_INITIAL 16 //Chcek PEC calculation in general
+#define PEC_POLYNOMIAL 0x4599
 
 /* --------------------------- Global Variables ----------------------- */
 uint16_t aVCell[NUM_DEVICES * CELLS_PER_DEVICE];
@@ -272,7 +273,7 @@ esp_err_t read_VCell(spi_device_handle_t stDeviceHandle, uint16_t NCMD)
     return eStatus;
 }
 
-uint32_t PEC15_calc(uint8_t NLen, uint8_t *pData)
+uint16_t PEC15_calc(uint16_t NBytes, const uint8_t *aData) 
 {
     /*
     *===========================================================================
@@ -285,28 +286,27 @@ uint32_t PEC15_calc(uint8_t NLen, uint8_t *pData)
     *   Calculates the 15-bit Packet Error Code (PEC) for the given data.
     *===========================================================================
     *   Revision History:
-    *   23/10/26 CP Initial Version
+    *   28/10/26 CP Initial Version
     *
     *===========================================================================
     */
-    uint16_t NCRC = 0;
-    uint16_t NCounter;
-    
-    for (NCounter = 0; NCounter < NLen; NCounter++)
+   uint16_t NRemainder = PEC_INITIAL;
+
+    for (uint16_t NByte = 0; NByte < NBytes; NByte++)
     {
-        NCRC ^= ((uint16_t)pData[NCounter] << 7);
-        for (uint8_t i = 0; i < 8; i++)
+        NRemainder ^= (uint16_t)aData[NByte] << 7;
+        for (uint8_t NBit = 0; NBit < 8; NBit++)
         {
-            if (NCRC & 0x4000)
+            if (NRemainder & 0x4000)
             {
-                NCRC = (NCRC << 1) ^ CRC15_POLYNOMIAL;
+                NRemainder = (NRemainder << 1) ^ PEC_POLYNOMIAL;
             }
             else
             {
-                NCRC <<= 1;
+                NRemainder <<= 1;
             }
         }
     }
-    
-    return (NCRC & 0x7FFF);
+
+    return (NRemainder & 0x7FFF) << 1;
 }
