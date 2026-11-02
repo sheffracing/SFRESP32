@@ -26,7 +26,7 @@ stSensorMap_t stAPPS1Map = {
     .fLowerLimit = 0.5f,
     .fUpperLimit = 3.1f,
     .afLookupTable = {
-        {0.53f, 0.55f, 0.57f, 0.60f, 0.62f, 0.65f, 0.68f, 0.70f, 0.72f, 0.75f,
+        {0.0f, 0.5f, 0.57f, 0.60f, 0.62f, 0.65f, 0.68f, 0.70f, 0.72f, 0.75f,
         0.78f, 0.80f, 0.82f, 0.85f, 0.88f, 0.90f, 0.93f, 0.95f, 0.98f, 1.00f,
         1.02f, 1.05f, 1.08f, 1.10f, 1.12f, 1.15f, 1.18f, 1.20f, 1.23f, 1.25f,
         1.27f, 1.30f, 1.33f, 1.35f, 1.38f, 1.40f, 1.43f, 1.45f, 1.48f, 1.50f,
@@ -35,7 +35,7 @@ stSensorMap_t stAPPS1Map = {
         2.03f, 2.05f, 2.08f, 2.10f, 2.12f, 2.15f, 2.17f, 2.20f, 2.23f, 2.25f,
         2.28f, 2.30f, 2.33f, 2.35f, 2.38f, 2.40f, 2.42f, 2.45f, 2.48f, 2.50f,
         2.52f, 2.55f, 2.58f, 2.60f, 2.62f, 2.65f, 2.68f, 2.70f, 2.73f, 2.75f,
-        2.77f, 2.80f, 2.83f, 2.85f, 2.88f, 2.90f, 2.93f, 2.95f, 2.98f, 3.00f, 3.05f},
+        2.77f, 2.80f, 2.83f, 2.85f, 2.88f, 2.90f, 2.93f, 2.95f, 2.98f, 3.10f, 5.0f},
         {00.0f, 01.0f, 02.0f, 03.0f, 04.0f, 05.0f, 06.0f, 07.0f, 08.0f, 09.0f, 
         10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f, 17.0f, 18.0f, 19.0f, 
         20.0f, 21.0f, 22.0f, 23.0f, 24.0f, 25.0f, 26.0f, 27.0f, 28.0f, 29.0f, 
@@ -52,26 +52,26 @@ stSensorMap_t stAPPS2Map = {
     .fLowerLimit = 0.5f,
     .fUpperLimit = 3.1f,
     .afLookupTable = {
-        {2.98f, 2.95f, 2.93f, 2.90f, 2.88f, 2.85f, 2.83f, 2.80f, 2.77f, 2.75f,
-        2.73f, 2.70f, 2.68f, 2.65f, 2.62f, 2.60f, 2.58f, 2.55f, 2.52f, 2.50f,
-        2.48f, 2.45f, 2.42f, 2.40f, 2.38f, 2.35f, 2.33f, 2.30f, 2.28f, 2.25f,
-        2.23f, 2.20f, 2.17f, 2.15f, 2.12f, 2.10f, 2.08f, 2.05f, 2.03f, 2.00f,
-        1.98f, 1.95f, 1.93f, 1.90f, 1.88f, 1.85f, 1.83f, 1.80f, 1.78f, 1.75f,
-        1.73f, 1.70f, 1.68f, 1.65f, 1.62f, 1.60f, 1.57f, 1.55f, 1.53f, 1.50f,
-        1.48f, 1.45f, 1.43f, 1.40f, 1.38f, 1.35f, 1.33f, 1.30f, 1.27f, 1.25f,
-        1.23f, 1.20f, 1.18f, 1.15f, 1.12f, 1.10f, 1.08f, 1.05f, 1.02f, 1.00f,
-        0.98f, 0.95f, 0.93f, 0.90f, 0.88f, 0.85f, 0.82f, 0.80f, 0.78f, 0.75f,
-        0.72f, 0.70f, 0.68f, 0.65f, 0.62f, 0.60f, 0.57f, 0.55f, 0.53f, 0.52f, 0.51f},
-        {00.0f, 01.0f, 02.0f, 03.0f, 04.0f, 05.0f, 06.0f, 07.0f, 08.0f, 09.0f, 
-        10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f, 17.0f, 18.0f, 19.0f, 
-        20.0f, 21.0f, 22.0f, 23.0f, 24.0f, 25.0f, 26.0f, 27.0f, 28.0f, 29.0f, 
-        30.0f, 31.0f, 32.0f, 33.0f, 34.0f, 35.0f, 36.0f, 37.0f, 38.0f, 39.0f, 
-        40.0f, 41.0f, 42.0f, 43.0f, 44.0f, 45.0f, 46.0f, 47.0f, 48.0f, 49.0f, 
-        50.0f, 51.0f, 52.0f, 53.0f, 54.0f, 55.0f, 56.0f, 57.0f, 58.0f, 59.0f, 
-        60.0f, 61.0f, 62.0f, 63.0f, 64.0f, 65.0f, 66.0f, 67.0f, 68.0f, 69.0f, 
-        70.0f, 71.0f, 72.0f, 73.0f, 74.0f, 75.0f, 76.0f, 77.0f, 78.0f, 79.0f, 
-        80.0f, 81.0f, 82.0f, 83.0f, 84.0f, 85.0f, 86.0f, 87.0f, 88.0f, 89.0f, 
-        90.0f, 91.0f, 92.0f, 93.0f, 94.0f, 95.0f, 96.0f, 97.0f, 98.0f, 99.0f, 100.0f}},
+        {0.0f, 0.5f, 0.57f, 0.60f, 0.62f, 0.65f, 0.68f, 0.70f, 0.72f, 0.75f,
+        0.78f, 0.80f, 0.82f, 0.85f, 0.88f, 0.90f, 0.93f, 0.95f, 0.98f, 1.00f,
+        1.02f, 1.05f, 1.08f, 1.10f, 1.12f, 1.15f, 1.18f, 1.20f, 1.23f, 1.25f,
+        1.27f, 1.30f, 1.33f, 1.35f, 1.38f, 1.40f, 1.43f, 1.45f, 1.48f, 1.50f,
+        1.53f, 1.55f, 1.57f, 1.60f, 1.62f, 1.65f, 1.68f, 1.70f, 1.73f, 1.75f,
+        1.78f, 1.80f, 1.83f, 1.85f, 1.88f, 1.90f, 1.93f, 1.95f, 1.98f, 2.00f,
+        2.03f, 2.05f, 2.08f, 2.10f, 2.12f, 2.15f, 2.17f, 2.20f, 2.23f, 2.25f,
+        2.28f, 2.30f, 2.33f, 2.35f, 2.38f, 2.40f, 2.42f, 2.45f, 2.48f, 2.50f,
+        2.52f, 2.55f, 2.58f, 2.60f, 2.62f, 2.65f, 2.68f, 2.70f, 2.73f, 2.75f,
+        2.77f, 2.80f, 2.83f, 2.85f, 2.88f, 2.90f, 2.93f, 2.95f, 2.98f, 3.10f, 5.0f},
+        {100.00, 98.99, 97.98, 96.97, 95.96, 94.95, 93.94, 92.93, 91.92, 90.91, 
+        89.90, 88.89, 87.88, 86.87, 85.86, 84.85, 83.84, 82.83, 81.82, 80.81, 
+        79.80, 78.79, 77.78, 76.77, 75.76, 74.75, 73.74, 72.73, 71.72, 70.71, 
+        69.70, 68.69, 67.68, 66.67, 65.66, 64.65, 63.64, 62.63, 61.62, 60.61, 
+        59.60, 58.59, 57.58, 56.57, 55.56, 54.55, 53.54, 52.53, 51.52, 50.51, 
+        49.49, 48.48, 47.47, 46.46, 45.45, 44.44, 43.43, 42.42, 41.41, 40.40, 
+        39.39, 38.38, 37.37, 36.36, 35.35, 34.34, 33.33, 32.32, 31.31, 30.30, 
+        29.29, 28.28, 27.27, 26.26, 25.25, 24.24, 23.23, 22.22, 21.21, 20.20, 
+        19.19, 18.18, 17.17, 16.16, 15.15, 14.14, 13.13, 12.12, 11.11, 10.10, 
+        09.09, 08.08, 07.07, 06.06, 05.05, 04.04, 03.03, 02.02, 01.01, 00.00,}},
 };
 
 /* --------------------------- Global Variables ----------------------------- */
@@ -148,7 +148,7 @@ void task_1ms(void)
     }
 
     /* Read Sensor 2 */
-    rAPPs[1] = read_sensor(&stADCHandle1, &stAPPS2Map);
+    rAPPs[1] = read_sensor(&stADCHandle1, &stAPPS1Map);
     if (rAPPs[1] == -999.0f)
     {
         /* Sensor Error */
@@ -160,30 +160,20 @@ void task_1ms(void)
     }
 
     /* This actually checkes if drift is > diff + 1 because of int cast */
-    if (abs(rAPPs[0] - rAPPs[1]) > APPS_MAX_DIFFERENCE)
-    {
-        /* Sensor Error */
-        BAPPSDrift = TRUE;
-    }
-    else
-    {
-        BAPPSDrift = FALSE;
-        rAPPsFinal = (rAPPs[0] + rAPPs[1]) / 2.0f;
-    }
-
+    BAPPSDrift = (abs(rAPPs[0] - rAPPs[1]) > APPS_MAX_DIFFERENCE) ? TRUE : FALSE;
     BThrottleOK = !(BAPPSFail[0] || BAPPSFail[1] || BAPPSDrift);
 
+    /* Calculate and send throttle if checks pass */
     if (BThrottleOK)
     {
-        CAN_transmit(stCANBus0, &(CAN_frame_t)
-        {
-            .dwID = 0x05,
-            .byDLC = 2,
-            .abData = {
-                (byte)((int)(rAPPsFinal * 10) >> 8 & 0xFF),          
-                (byte)((int)(rAPPsFinal * 10) & 0xFF),
-            }
-        });
+        rAPPsFinal = (rAPPs[0] + rAPPs[1]) / 2.0f;
+        CMD_TargetRelativeCurrent = rAPPsFinal;
+        CMD_DriveEnable = TRUE;
+        SetRelCurrentTx(stCANBus0);
+    } else
+    {
+        CMD_DriveEnable = FALSE;
+        rAPPsFinal = 0.0f;
     }
 
     /* Update time since power up */
@@ -211,24 +201,9 @@ void task_100ms(void)
     /* CAN error handling */
     CANRxCheck1ms();
 
-    /* If APPS is ok send inverter enable message */
-    if (BThrottleOK)
-    {
-        CAN_transmit(stCANBus0, &(CAN_frame_t)
-        {
-            .dwID = 0x0C,
-            .byDLC = 1,
-            .abData = {0x01}
-        });
-    } else
-    {
-        CAN_transmit(stCANBus0, &(CAN_frame_t)
-        {
-            .dwID = 0x0C,
-            .byDLC = 1,
-            .abData = {0x00}
-        });
-    }
+    /* Status and Drive enable messages */
+    SetDriveEnableTx(stCANBus0);
+    StatusAPPSSensorTx(stCANBus0);
 
     /* Every Second */
     if ( wNCounter % (PERIOD_1S / PERIOD_TASK_100MS) == 0 ) 
@@ -254,18 +229,9 @@ void task_100ms(void)
             }
         });
 
-        /* APPS Status Message */
-        CAN_transmit(stCANBus0, &(CAN_frame_t)
-        {
-            .dwID = 0xA0,
-            .byDLC = 4,
-            .abData = {
-                (int8_t)(rAPPs[0]),
-                (int8_t)(rAPPs[1]),
-                (int8_t)(rAPPsFinal),
-                (byte)((BThrottleOK << 4) | (BAPPSFail[0] << 2) | (BAPPSFail[1] << 1) | (BAPPSDrift << 0))
-            }
-        });
+        /* Debug */
+        ESP_LOGI(SFR_TAG, "Sensor Values: %f, %f, Final: %f, Throttle OK: %s", 
+            rAPPs[0], rAPPs[1], rAPPsFinal, BThrottleOK ? "Yes" : "No");
 
     };
 
