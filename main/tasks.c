@@ -19,6 +19,70 @@ extern uint8_t byMACAddress[6];
 extern esp_reset_reason_t eResetReason;
 extern eChipMode_t eDeviceMode;
 static esp_partition_t *stOTAPartition = NULL;
+extern spi_device_handle_t MCP320XDevs[1];
+const stSensorMap_t stAccuFanCurve = {
+    .fLowerLimit = -40.0f,
+    .fUpperLimit = 150.0f,
+    .afLookupTable = {
+        {-40.0f, 15.0f, 20.0f, 30.0f, 35.0f, 150.0f},
+        {0.0f, 0.0f, 0.0f, 60.0f, 100.0f, 100.0f}
+    }
+};
+const stSensorMap_t stInverterFanCurve = {
+    .fLowerLimit = -40.0f,
+    .fUpperLimit = 150.0f,
+    .afLookupTable = {
+        {-40.0f, 15.0f, 20.0f, 30.0f, 35.0f, 150.0f},
+        {0.0f, 0.0f, 0.0f, 60.0f, 100.0f, 100.0f}
+    }
+};
+const stSensorMap_t stMotorFanCurve = {
+    .fLowerLimit = -40.0f,
+    .fUpperLimit = 150.0f,
+    .afLookupTable = {
+        {-40.0f, 15.0f, 20.0f, 30.0f, 35.0f, 150.0f},
+        {0.0f, 0.0f, 0.0f, 60.0f, 100.0f, 100.0f}
+    }
+};
+ledc_channel_config_t stRadFanChannelConfig = {
+    .gpio_num = CONTROL_RADFAN,
+    .speed_mode = LEDC_LOW_SPEED_MODE,
+    .channel = LEDC_CHANNEL_0,
+    .intr_type = LEDC_INTR_DISABLE,
+    .timer_sel = LEDC_TIMER_0,
+    .duty = 0,
+    .hpoint = 0,
+    .sleep_mode = LEDC_SLEEP_MODE_NO_ALIVE_NO_PD,
+    .flags = {
+        .output_invert = 0,
+    },
+};
+ledc_channel_config_t stPumpChannelConfig = {
+    .gpio_num = CONTROL_PUMP,
+    .speed_mode = LEDC_LOW_SPEED_MODE,
+    .channel = LEDC_CHANNEL_1,
+    .intr_type = LEDC_INTR_DISABLE,
+    .timer_sel = LEDC_TIMER_0,
+    .duty = 0,
+    .hpoint = 0,
+    .sleep_mode = LEDC_SLEEP_MODE_NO_ALIVE_NO_PD,
+    .flags = {
+        .output_invert = 0,
+    },
+};
+ledc_channel_config_t stAccuFanChannelConfig = {
+    .gpio_num = CONTROL_ACCUFAN,
+    .speed_mode = LEDC_LOW_SPEED_MODE,
+    .channel = LEDC_CHANNEL_2,
+    .intr_type = LEDC_INTR_DISABLE,
+    .timer_sel = LEDC_TIMER_0,
+    .duty = 0,
+    .hpoint = 0,
+    .sleep_mode = LEDC_SLEEP_MODE_NO_ALIVE_NO_PD,
+    .flags = {
+        .output_invert = 0,
+    },
+};
 
 /* --------------------------- Global Variables ----------------------------- */
 dword adwMaxTaskTime[eTASK_TOTAL];
@@ -31,6 +95,7 @@ dword dwTimeSincePowerUpms = 0;
 #define PERIOD_10S 10000        // ms
 #define PERIOD_1S 1000          // ms
 #define MAX_eREFLASH_TIME_US 300000000 // us
+#define LV_UV_TIMEOUT 50 // *100ms = 5s of undervoltage before shutdown
 
 /* --------------------------- Functions ----------------------------- */
 /* Background task that runs as often as processor time is available. */
@@ -72,6 +137,8 @@ void task_BG(void)
 void task_1ms(void)
 {
     qword qwtTaskTimer;
+    uint8_t rInverterFanDuty;
+    uint8_t rMotorFanDuty;
 
     qwtTaskTimer = esp_timer_get_time();
     astTaskState[eTASK_1MS] = eTASK_ACTIVE;
@@ -81,6 +148,56 @@ void task_1ms(void)
 
     /* Update time since power up */
     dwTimeSincePowerUpms++;
+
+    /* Set Fan and Pump Speeds */
+    if (TCellMax > stAccuFanCurve.fUpperLimit || 
+        TCellMax < stAccuFanCurve.fLowerLimit)
+    {
+        rAccuFanDuty[0] = 100;
+        rAccuFanDuty[1] = 100;
+    } else
+    {
+        rAccuFanDuty[0] = (uint8_t)(convert_sensor(TCellMax, &stAccuFanCurve));
+        rAccuFanDuty[1] = rAccuFanDuty[0];
+    }
+
+    if (Actual_TempController > stInverterFanCurve.fUpperLimit ||
+        Actual_TempMotor < stMotorFanCurve.fLowerLimit)
+    {
+        rInverterFanDuty = 100;
+    } else
+    {
+        rInverterFanDuty = (uint8_t)(convert_sensor(Actual_TempController, &stInverterFanCurve));
+    }
+
+    if (Actual_TempMotor > stMotorFanCurve.fUpperLimit || 
+        Actual_TempMotor < stMotorFanCurve.fLowerLimit)
+    {
+        rMotorFanDuty = 100;
+    } else
+    {
+        rMotorFanDuty = (uint8_t)(convert_sensor(Actual_TempMotor, &stMotorFanCurve));
+    }
+
+    if (rMotorFanDuty > rInverterFanDuty)
+    {
+        rRadFanDuty = rMotorFanDuty;
+        rPumpDuty[0] = rMotorFanDuty;
+        rPumpDuty[1] = rMotorFanDuty;
+    } else
+    {
+        rRadFanDuty = rInverterFanDuty;
+        rPumpDuty[0] = rInverterFanDuty;
+        rPumpDuty[1] = rInverterFanDuty;
+    }
+
+    /* setting duty cycles */
+    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, rRadFanDuty);
+    ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
+    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, rPumpDuty[0]);
+    ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1);
+    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2, rAccuFanDuty[0]);
+    ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2);
 
     /* Update max task time */
     qwtTaskTimer = esp_timer_get_time() - qwtTaskTimer;
@@ -97,12 +214,44 @@ void task_100ms(void)
     
     static qword qwtTaskTimer;
     static word wNCounter;
+    static word wNUndervoltageTimeout;
+    float VIRawADC[6];
 
     qwtTaskTimer = esp_timer_get_time();
     astTaskState[eTASK_100MS] = eTASK_ACTIVE;
 
     /* CAN error handling */
     CANRxCheck1ms();
+
+    /* If 12V supply is undervoltage for too long turn off main relay */
+    if (wNUndervoltageTimeout > LV_UV_TIMEOUT)
+    {
+        gpio_set_level(CONTROL_RELAY, 0);
+    }
+    if (false) // REPLACE WITH UNDERVOLTAGE CHECK
+    {
+        wNUndervoltageTimeout++;
+    } else
+    {
+        wNUndervoltageTimeout = 0;
+    }
+
+    /* Read current draws and report */
+    for (word wNChannel = 0; wNChannel < 6; wNChannel++)
+    {
+        VIRawADC[wNChannel] = MCP320X_read(MCP320XDevs[0], wNChannel);
+    }
+    
+    IRadFan         = convert_tsc1021B(VIRawADC[0]);
+    IPump[0]        = convert_tsc1021B(VIRawADC[4]);
+    IPump[1]        = convert_tsc1021B(VIRawADC[5]);
+    IAccuFan[0]     = convert_tsc1021B(VIRawADC[2]);
+    IAccuFan[1]     = convert_tsc1021B(VIRawADC[3]);
+    IHorn           = convert_tsc1021B(VIRawADC[1]);
+
+    PDUStats1Tx(stCANBus0);
+    PDUStats2Tx(stCANBus0);
+    PDUStats3Tx(stCANBus0);
 
     /* Every Second */
     if ( wNCounter % (PERIOD_1S / PERIOD_TASK_100MS) == 0 ) 
@@ -233,4 +382,9 @@ void pin_toggle(gpio_num_t ePin)
     static boolean BLEDState = false;
     BLEDState = !BLEDState;
     gpio_set_level(ePin, BLEDState);
+}
+
+float convert_tsc1021B(float fADCValue)
+{
+    return fADCValue / (50.0f * 0.03f);
 }

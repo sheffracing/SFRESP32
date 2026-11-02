@@ -19,6 +19,7 @@
 #include "main.h"
 #include "CAN/canDecodeAuto.h"
 #include "mcp320X.h"
+#include "driver/ledc.h"
 
 /* --------------------------- Function prototypes ----------------------------- */
 void task_BG(void);
@@ -27,6 +28,7 @@ void task_100ms(void);
 void reflash_task_100ms(void);
 void pin_toggle(gpio_num_t pin);
 void reflash_task_BG();
+float convert_tsc1021B(float fADCValue);
 
 #define SFRTasks
 #endif

@@ -40,7 +40,10 @@ esp_timer_handle_t stTaskInterrupt1ms;
 esp_timer_handle_t stTaskInterrupt100ms;
 esp_reset_reason_t eResetReason;
 eChipMode_t eDeviceMode = eNORMAL;
-spi_device_handle_t MCP320XDevs[2];
+spi_device_handle_t MCP320XDevs[1];
+extern ledc_channel_config_t stAccuFanChannelConfig;
+extern ledc_channel_config_t stRadFanChannelConfig;
+extern ledc_channel_config_t stPumpChannelConfig;
 
 /* --------------------------- Function prototypes ----------------------------- */
 static void timers_init(void);
@@ -115,15 +118,15 @@ static void main_init(void)
 
     /* SD Card (SDCard and LCD share the SPI bus, take care) */
     /* SPI Devices */
-    // spi_bus_config_t stBusConfig = 
-    // {
-    //     .mosi_io_num = SPI_MOSI,
-    //     .miso_io_num = SPI_MISO,
-    //     .sclk_io_num = SPI_SCK,
-    //     .quadwp_io_num = -1,
-    //     .quadhd_io_num = -1,
-    // };
-    // eStatus = spi_bus_initialize(SPI2_HOST, &stBusConfig, SPI_DMA_CH_AUTO);
+    spi_bus_config_t stBusConfig = 
+    {
+        .mosi_io_num = SPI_MOSI,
+        .miso_io_num = SPI_MISO,
+        .sclk_io_num = SPI_SCK,
+        .quadwp_io_num = -1,
+        .quadhd_io_num = -1,
+    };
+    eStatus = spi_bus_initialize(SPI2_HOST, &stBusConfig, SPI_DMA_CH_AUTO);
 
     /* SD Card */
     // eStatus = SD_card_init();
@@ -133,12 +136,12 @@ static void main_init(void)
     // }
 
     /* ADC MCP3204/8 This is a example config is required */
-    // uint8_t aNCSPins[2] = {SPI_MCP3204_1_CS, SPI_MCP3204_2_CS};
-    // eStatus = MCP320X_init(aNCSPins, MCP320XDevs);
-    // if (eStatus != ESP_OK)
-    // {
-    //     ESP_LOGE(SFR_TAG, "Failed to initialise MCP320X: %s", esp_err_to_name(eStatus));
-    // }
+    uint8_t aNCSPins[1] = {SPI_MCP3208_CS};
+    eStatus = MCP320X_init(1, aNCSPins, MCP320XDevs);
+    if (eStatus != ESP_OK)
+    {
+        ESP_LOGE(SFR_TAG, "Failed to initialise MCP320X: %s", esp_err_to_name(eStatus));
+    }
     /* END of SPI Devices*/
     
     /* CAN BUS */
@@ -197,6 +200,39 @@ static void GPIO_init(void)
         .intr_type = GPIO_INTR_DISABLE
     };
     gpio_config(&onboardLEDConfig);
+
+    gpio_config_t hornPinConfig = {
+        .pin_bit_mask = 1ULL << CONTROL_HORN,
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = 0,
+        .pull_down_en = 0,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    gpio_config(&hornPinConfig);
+    gpio_config_t relayPinConfig = {
+        .pin_bit_mask = 1ULL << CONTROL_RELAY,
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = 0,
+        .pull_down_en = 0,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    gpio_config(&relayPinConfig);
+    gpio_set_level(CONTROL_RELAY, 1);
+
+    ledc_timer_config_t stLedcTimerConfig = {
+        .speed_mode = LEDC_LOW_SPEED_MODE,
+        .duty_resolution = LEDC_TIMER_13_BIT,
+        .timer_num = LEDC_TIMER_0,
+        .freq_hz = 1000, // 1kHz
+        .clk_cfg = LEDC_AUTO_CLK,
+        .deconfigure = false,
+    };
+    ESP_ERROR_CHECK(ledc_timer_config(&stLedcTimerConfig));
+
+    ledc_channel_config(&stRadFanChannelConfig);
+    ledc_channel_config(&stPumpChannelConfig);
+    ledc_channel_config(&stAccuFanChannelConfig);
+
 }
 
 void set_device_mode(eChipMode_t mode)

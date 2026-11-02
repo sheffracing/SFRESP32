@@ -5,9 +5,10 @@
 #define SFR_TAG  "SFR_ESP32"
 
 #define GPIO_ONBOARD_LED 15
-#define GPIO_CAN0_TX 22
-#define GPIO_CAN0_RX 23
+#define GPIO_CAN0_TX 23
+#define GPIO_CAN0_RX 16
 
+/* CAN bus 2 optional */
 // #define GPIO_CAN1_TX XX
 // #define GPIO_CAN1_RX XX
 
@@ -43,5 +44,13 @@
 /* Dyno Only */
 #define SPI_MCP3204_1_CS 17
 #define SPI_MCP3204_2_CS 16
+
+/* PDU Only */
+#define SPI_MCP3208_CS 17
+#define CONTROL_RADFAN 0
+#define CONTROL_HORN 1
+#define CONTROL_PUMP 2
+#define CONTROL_ACCUFAN 21
+#define CONTROL_RELAY 22
 
 #endif // SFR_PIN
