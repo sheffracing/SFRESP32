@@ -21,7 +21,8 @@ Written by Cole Perera for Sheffield Formula Racing 2026
 #define CELL_VOLTAGE_MIN 2.5f // Minimum cell voltage in volts
 #define CELL_VOLTAGE_MAX 4.3f // Maximum cell voltage in volts
 #define NUM_DEVICES 2 // Number of LTC6811 devices in the stack
-#define BYTES_PER_DEVICE 6 // Number of bytes per device for registers
+#define BYTES_PER_DEVICE 8 // Number of bytes per device 2 PEC + 6 Data
+#define BYTES_PER_REGISTER 6 // Number of bytes per register group
 
 /* --------------------------- Functions ------------------------------ */
 esp_err_t LTC6811_init(uint8_t NCSPin, spi_device_handle_t stDeviceHandle)
@@ -41,7 +42,7 @@ esp_err_t LTC6811_init(uint8_t NCSPin, spi_device_handle_t stDeviceHandle)
     *===========================================================================
     */
     esp_err_t eStatus = ESP_OK;
-    uint8_t aNData[2 + BYTES_PER_DEVICE * NUM_DEVICES]; 
+    uint8_t aNData[2 + BYTES_PER_REGISTER * NUM_DEVICES]; 
     uint16_t NVUV;
     uint16_t NVOV;
     uint16_t NCounter;
@@ -73,13 +74,13 @@ esp_err_t LTC6811_init(uint8_t NCSPin, spi_device_handle_t stDeviceHandle)
 
     for( NCounter = 1; NCounter < NUM_DEVICES; NCounter++)
     {
-        memcpy(&aNData[NCounter * BYTES_PER_DEVICE], &aNData[0], BYTES_PER_DEVICE);
+        memcpy(&aNData[NCounter * BYTES_PER_REGISTER], &aNData[0], BYTES_PER_REGISTER);
     }
 
-    aNData[BYTES_PER_DEVICE * NUM_DEVICES]      = WRCFGA & 0xFF;
-    aNData[BYTES_PER_DEVICE * NUM_DEVICES + 1]  = WRCFGA << 8 & 0xFF;
+    aNData[BYTES_PER_REGISTER * NUM_DEVICES]      = WRCFGA & 0xFF;
+    aNData[BYTES_PER_REGISTER * NUM_DEVICES + 1]  = WRCFGA << 8 & 0xFF;
 
-    BC_Write(stDeviceHandle, WRCFGA, (2 + BYTES_PER_DEVICE * NUM_DEVICES), &aNData);
+    BC_Write(stDeviceHandle, WRCFGA, (2 + BYTES_PER_REGISTER * NUM_DEVICES), &aNData);
     return eStatus;
 }
 
@@ -106,17 +107,17 @@ esp_err_t BC_Write(spi_device_handle_t stDeviceHandle, uint16_t CMD, uint16_t NB
     word wNData;
     uint16_t NCounter;
     uint16_t NOffset = 0;
-    uint8_t NDataTx[4 + NBytes + 2 * (NBytes / BYTES_PER_DEVICE)]; // 2 CMD, 2 PEC, NBytes data, 2 PEC for every 6 bytes of data
+    uint8_t NDataTx[4 + NBytes + 2 * (NBytes / BYTES_PER_REGISTER)]; // 2 CMD, 2 PEC, NBytes data, 2 PEC for every 6 bytes of data
     
-    for (NCounter = 0; NCounter < NBytes; NCounter+= BYTES_PER_DEVICE)
+    for (NCounter = 0; NCounter < NBytes; NCounter += BYTES_PER_REGISTER)
     {
         /* 6 Data Bytes */
-        NOffset = NCounter + 2 * (NCounter / BYTES_PER_DEVICE);
-        memcpy(&NDataTx[NOffset], &aData[NCounter], BYTES_PER_DEVICE);
+        NOffset = NCounter + 2 * (NCounter / BYTES_PER_REGISTER);
+        memcpy(&NDataTx[NOffset], &aData[NCounter], BYTES_PER_REGISTER);
         
         /* 2 Byte PEC for every 6 bytes of data */
-        NDataTx[NOffset + BYTES_PER_DEVICE + 0] = (PEC15_calc(BYTES_PER_DEVICE, &aData[NCounter]) >> 8) & 0xFF;
-        NDataTx[NOffset + BYTES_PER_DEVICE + 1] = PEC15_calc(BYTES_PER_DEVICE, &aData[NCounter]) & 0xFF;
+        NDataTx[NOffset + BYTES_PER_REGISTER + 0] = (PEC15_calc(BYTES_PER_REGISTER, &aData[NCounter]) >> 8) & 0xFF;
+        NDataTx[NOffset + BYTES_PER_REGISTER + 1] = PEC15_calc(BYTES_PER_REGISTER, &aData[NCounter]) & 0xFF;
     }
 
     /* 2 Byte PEC for the command */
@@ -129,7 +130,7 @@ esp_err_t BC_Write(spi_device_handle_t stDeviceHandle, uint16_t CMD, uint16_t NB
 
     /* Transmit */
     memset(&stSPICall, 0, sizeof(stSPICall));
-    stSPICall.length = 8 * (4 + NBytes + 2 * (NBytes / 6));
+    stSPICall.length = 8 * (4 + NBytes + 2 * (NBytes / BYTES_PER_REGISTER));
     stSPICall.tx_buffer = NDataTx;
     eStatus = spi_device_transmit(stDeviceHandle, &stSPICall);
     return eStatus;
@@ -159,36 +160,43 @@ esp_err_t BC_Read(spi_device_handle_t stDeviceHandle, uint16_t CMD, uint16_t NBy
     uint16_t NCounter;
     uint16_t NOffset = 0;
     uint8_t NDataTx[4]; // 2 CMD, 2 PEC
-    uint8_t NDataRx[NBytes + 2 * (NBytes / 8)]; // 2 bytes PEC for every 8 bytes of data
+    uint8_t NDataRx[NBytes + 2 * (NBytes / BYTES_PER_REGISTER)]; // 2 bytes PEC for every 8 bytes of data
+    uint16_t NRxPEC;
 
-    /* 2 Byte Command */
-    NDataTx[0] = (CMD >> 8) & 0xFF;
-    NDataTx[1] = CMD & 0xFF;
-    
     /* 2 Byte PEC */
-    NDataTx[2] = (PEC15_calc(2, &NDataTx) >> 8) & 0xFF; // Calculate PEC for command
-    NDataTx[3] = PEC15_calc(2, &NDataTx) & 0xFF;
+    NDataTx[0] = (PEC15_calc(2, &NDataTx) >> 8) & 0xFF; // Calculate PEC for command
+    NDataTx[1] = PEC15_calc(2, &NDataTx) & 0xFF;
+    
+    /* 2 Byte Command */
+    NDataTx[2] = (CMD >> 8) & 0xFF;
+    NDataTx[3] = CMD & 0xFF;
 
     memset(&stSPICall, 0, sizeof(stSPICall));
-    stSPICall.length = 8 * (4 + NBytes + 2 * (NBytes / 8));
+    stSPICall.length = 8 * (4 + NBytes + 2 * (NBytes / BYTES_PER_REGISTER));
     stSPICall.tx_buffer = NDataTx;
     stSPICall.rx_buffer = NDataRx;
     eStatus = spi_device_transmit(stDeviceHandle, &stSPICall);
     if (eStatus != ESP_OK) { return eStatus; }
 
     /* Check the received data */
-    for (NCounter = 0; NCounter < NBytes; NCounter+= 8)
+    for (NCounter = 0; NCounter < NBytes; NCounter += BYTES_PER_DEVICE)
     {
         /* 8 Data Bytes */
-        NOffset = 4 + NCounter + 2 * (NCounter / 8);
+        NOffset = NCounter + 2 * (NCounter / BYTES_PER_DEVICE);
         /* Check PEC for every 8 bytes of data */
-        if (PEC15_calc(8, &NDataRx[NOffset]) != ((NDataRx[NOffset + 8] << 8) | NDataRx[NOffset + 9]))
+        NRxPEC = (NDataRx[NOffset + BYTES_PER_DEVICE] << 8) | NDataRx[NOffset + BYTES_PER_DEVICE + 1];
+        if (PEC15_calc(8, &NDataRx[NOffset]) != NRxPEC)
         {
             return ESP_ERR_INVALID_CRC;
         }
     }
 
-    /* Data Rxed and verified so copy to output buffer */
-    memcpy(aData, NDataRx, NBytes);
+    /* Data ok copy to provided buffer */
+    for (NCounter = 0; NCounter < NBytes; NCounter += BYTES_PER_DEVICE)
+    {
+        NOffset = NCounter + 2 * (NCounter / BYTES_PER_DEVICE);
+        memcpy(&aData[NCounter], &NDataRx[NOffset], BYTES_PER_DEVICE);
+    }
+
     return eStatus;
 }
