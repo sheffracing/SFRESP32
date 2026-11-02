@@ -21,13 +21,8 @@ Written by Cole Perera for Sheffield Formula Racing 2026
 #define CELLS_PER_GROUP 3 // Number of cells per register group
 #define VUV 0x0000 // Under voltage threshold
 #define VOV 0x0000 // Over voltage threshold
-#define PEC_INITIAL 16 //Chcek PEC calculation in general
-#define PEC_POLYNOMIAL 0x4599
 
 /* --------------------------- Global Variables ----------------------- */
-uint16_t aVCell[NUM_DEVICES * CELLS_PER_DEVICE];
-uint16_t tSinceVCellms[NUM_DEVICES * CELLS_PER_DEVICE]; //ms
-float aVCellActual[NUM_DEVICES * CELLS_PER_DEVICE];
 spi_device_handle_t stLTC6811Handle;
 
 
@@ -162,21 +157,23 @@ esp_err_t BC_Read(uint16_t CMD, uint8_t *aData)
     esp_err_t eStatus = ESP_OK;
     spi_transaction_t stSPICall;
     uint16_t NCounter;
-    uint32_t NPEC;
     uint16_t NOffset = 0;
     uint8_t NDataTx[4]; // 2 CMD, 2 PEC
     uint16_t NBytes = BYTES_PER_REGISTER * NUM_DEVICES;
     uint8_t NDataRx[NBytes + 2 * (NBytes / BYTES_PER_REGISTER)]; // 2 bytes PEC for every 8 bytes of data
     uint16_t NRxPEC;
+    uint16_t NTxPEC;
     
     /* 2 Byte Command */
     NDataTx[2] = (CMD >> 8) & 0xFF;
     NDataTx[3] = CMD & 0xFF;
 
     /* 2 Byte PEC for the command */
-    NDataTx[0] = 0xED;
-    NDataTx[1] = 0x72;
+    NTxPEC = PEC15_calc(2, &NDataTx[2]);
+    NDataTx[0] = (NTxPEC >> 8) & 0xFF;
+    NDataTx[1] = NTxPEC & 0xFF;
 
+    /* SPI Transaction */
     memset(&stSPICall, 0, sizeof(stSPICall));
     stSPICall.length = 8 * (4 + NBytes + 2 * (NBytes / BYTES_PER_REGISTER));
     stSPICall.tx_buffer = NDataTx;
@@ -207,13 +204,13 @@ esp_err_t BC_Read(uint16_t CMD, uint8_t *aData)
     return eStatus;
 }
 
-esp_err_t read_VCell(uint16_t NCMD)
+esp_err_t read_VCell(uint16_t NCMD, uint8_t *aNData)
 {
     /*
     *===========================================================================
     *   read_VCell
     *   Takes:   NCMD - Command to send to the LTC6811
-    *            
+    *            aNData - Pointer to the data in the read buffer
     *   Returns: ESP_OK if successful, error code if not.
     * 
     *   Reads the cell voltages from the LTC6811 devices. Stores voltages in the global array aVCell.
@@ -225,8 +222,6 @@ esp_err_t read_VCell(uint16_t NCMD)
     */
     esp_err_t eStatus = ESP_OK;
     uint8_t NGroup;
-    uint8_t aNData[BYTES_PER_REGISTER * NUM_DEVICES];
-    memset(aNData, 0, sizeof(aNData));
     uint16_t aVCells[3];
 
     /* Extract the cell group */
@@ -248,21 +243,72 @@ esp_err_t read_VCell(uint16_t NCMD)
             return ESP_ERR_INVALID_ARG;
     }
 
-    /* Read the cell voltages registers */
-    //eStatus = BC_Read(NCMD, aNData);
-
-    if (eStatus != ESP_OK) { return eStatus; }
-
-    /* Data ok, copy to global array */
     for (uint16_t NCounter = 0; NCounter < NUM_DEVICES; NCounter++)
     {
         aVCells[0] = (aNData[BYTES_PER_REGISTER * NCounter + 0] >> 0) | (aNData[BYTES_PER_REGISTER * NCounter + 1] << 8);
         aVCells[1] = (aNData[BYTES_PER_REGISTER * NCounter + 2] >> 0) | (aNData[BYTES_PER_REGISTER * NCounter + 3] << 8);
         aVCells[2] = (aNData[BYTES_PER_REGISTER * NCounter + 4] >> 0) | (aNData[BYTES_PER_REGISTER * NCounter + 5] << 8);
         
-        aVCell[NCounter * CELLS_PER_DEVICE + NGroup * CELLS_PER_GROUP + 0] = aVCells[0];
-        aVCell[NCounter * CELLS_PER_DEVICE + NGroup * CELLS_PER_GROUP + 1] = aVCells[1];
-        aVCell[NCounter * CELLS_PER_DEVICE + NGroup * CELLS_PER_GROUP + 2] = aVCells[2];
+        VCellRaw[NCounter * CELLS_PER_DEVICE + NGroup * CELLS_PER_GROUP + 0] = aVCells[0];
+        VCellRaw[NCounter * CELLS_PER_DEVICE + NGroup * CELLS_PER_GROUP + 1] = aVCells[1];
+        VCellRaw[NCounter * CELLS_PER_DEVICE + NGroup * CELLS_PER_GROUP + 2] = aVCells[2];
+
+        tSinceVCellms[NCounter * CELLS_PER_DEVICE + NGroup * CELLS_PER_GROUP + 0] = 0;
+        tSinceVCellms[NCounter * CELLS_PER_DEVICE + NGroup * CELLS_PER_GROUP + 1] = 0;
+        tSinceVCellms[NCounter * CELLS_PER_DEVICE + NGroup * CELLS_PER_GROUP + 2] = 0;
+    }
+
+    return eStatus;
+}
+
+esp_err_t read_Status(uint16_t NCMD, uint8_t *aNData)
+{
+    /*
+    *===========================================================================
+    *   read_VCell
+    *   Takes:   NCMD - Command to send to the LTC6811
+    *            aNData - Pointer to the data in the read buffer
+    *   Returns: ESP_OK if successful, error code if not.
+    * 
+    *   Reads the cell voltages from the LTC6811 devices. Stores voltages in the global array aVCell.
+    *===========================================================================
+    *   Revision History:
+    *   27/10/26 CP Initial Version
+    *
+    *===========================================================================
+    */
+    esp_err_t eStatus = ESP_OK;
+    uint8_t NGroup;
+    uint16_t aVCells[3];
+
+    /* Extract the cell group */
+    switch (NCMD)
+    {
+        case RDCVA:
+            NGroup = 0;
+            break;
+        case RDCVB:
+            NGroup = 1;
+            break;
+        case RDCVC:
+            NGroup = 2;
+            break;
+        case RDCVD:
+            NGroup = 3;
+            break;
+        default:
+            return ESP_ERR_INVALID_ARG;
+    }
+
+    for (uint16_t NCounter = 0; NCounter < NUM_DEVICES; NCounter++)
+    {
+        aVCells[0] = (aNData[BYTES_PER_REGISTER * NCounter + 0] >> 0) | (aNData[BYTES_PER_REGISTER * NCounter + 1] << 8);
+        aVCells[1] = (aNData[BYTES_PER_REGISTER * NCounter + 2] >> 0) | (aNData[BYTES_PER_REGISTER * NCounter + 3] << 8);
+        aVCells[2] = (aNData[BYTES_PER_REGISTER * NCounter + 4] >> 0) | (aNData[BYTES_PER_REGISTER * NCounter + 5] << 8);
+        
+        VCellRaw[NCounter * CELLS_PER_DEVICE + NGroup * CELLS_PER_GROUP + 0] = aVCells[0];
+        VCellRaw[NCounter * CELLS_PER_DEVICE + NGroup * CELLS_PER_GROUP + 1] = aVCells[1];
+        VCellRaw[NCounter * CELLS_PER_DEVICE + NGroup * CELLS_PER_GROUP + 2] = aVCells[2];
 
         tSinceVCellms[NCounter * CELLS_PER_DEVICE + NGroup * CELLS_PER_GROUP + 0] = 0;
         tSinceVCellms[NCounter * CELLS_PER_DEVICE + NGroup * CELLS_PER_GROUP + 1] = 0;
@@ -277,88 +323,126 @@ esp_err_t General_Read(uint16_t NCMD)
     esp_err_t eStatus = ESP_OK;
     uint8_t aNData[BYTES_PER_REGISTER * NUM_DEVICES];
 
+    /* Read Data */
     eStatus = BC_Read(NCMD, aNData);
     if (eStatus != ESP_OK) { return eStatus; }
 
+    /* Pass to revelvent decode function */
     switch (NCMD)
     {
         case RDCVA:
-            read_VCell(NCMD);
+            read_VCell(NCMD, aNData);
             break;
         case RDCVB:
-            read_VCell(NCMD);
+            read_VCell(NCMD, aNData);
             break;
         case RDCVC:
-            read_VCell(NCMD);
+            read_VCell(NCMD, aNData);
             break;
         case RDCVD:
-            read_VCell(NCMD);
-            break;
-        case RDSTATA:
-            read_Status(NCMD);
-            break;
-        case RDSTATB:
-            read_Status(NCMD);
+            read_VCell(NCMD, aNData);
             break;
         case RDAXA:
-            read_Aux(NCMD);
+            read_Aux(NCMD, aNData);
             break;
         case RDAXB:
-            read_Aux(NCMD);
-            break;
-        case RDCFGA:
-
-            break;
-        case RDSCTRL:
-
-            break;
-        case RDPWM:
-
-            break;
-        case RDCOMM:
-
+            read_Aux(NCMD, aNData);
             break;
         default:
-            return ESP_ERR_INVALID_ARG;
-
-    }    
-    return ESP_ERR_INVALID_STATE;
-}
-
-uint16_t PEC15_calc(uint16_t NBytes, const uint8_t *aData) 
-{
-    /*
-    *===========================================================================
-    *   PEC15_calc
-    *   Takes:   NLen - Length of data to calculate PEC for
-    *            pData - Pointer to data to calculate PEC for
-    * 
-    *   Returns: 15-bit PEC value
-    * 
-    *   Calculates the 15-bit Packet Error Code (PEC) for the given data.
-    *===========================================================================
-    *   Revision History:
-    *   28/10/26 CP Initial Version
-    *
-    *===========================================================================
-    */
-   uint16_t NRemainder = PEC_INITIAL;
-
-    for (uint16_t NByte = 0; NByte < NBytes; NByte++)
-    {
-        NRemainder ^= (uint16_t)aData[NByte] << 7;
-        for (uint8_t NBit = 0; NBit < 8; NBit++)
-        {
-            if (NRemainder & 0x4000)
-            {
-                NRemainder = (NRemainder << 1) ^ PEC_POLYNOMIAL;
-            }
-            else
-            {
-                NRemainder <<= 1;
-            }
-        }
+            break;
     }
 
-    return (NRemainder & 0x7FFF) << 1;
+    for (uint16_t NCounter = 0; NCounter < NUM_DEVICES; NCounter++)
+    {  
+        switch (NCMD)
+        {
+        case RDSTATA:   
+            VDevCellSum[NCounter]       = (aNData[BYTES_PER_REGISTER * NCounter + 0] >> 0) | (aNData[BYTES_PER_REGISTER * NCounter + 1] << 8);
+            TDevDieInternal[NCounter]   = (aNData[BYTES_PER_REGISTER * NCounter + 2] >> 0) | (aNData[BYTES_PER_REGISTER * NCounter + 3] << 8);
+            VDevSupplyAnalog[NCounter]  = (aNData[BYTES_PER_REGISTER * NCounter + 4] >> 0) | (aNData[BYTES_PER_REGISTER * NCounter + 5] << 8);
+        break;
+
+        case RDSTATB:
+            VDevSupplyDigital[NCounter] = (aNData[BYTES_PER_REGISTER * NCounter + 0] >> 0) | (aNData[BYTES_PER_REGISTER * NCounter + 1] << 8);
+
+            BUndervoltageCell[NCounter * CELLS_PER_DEVICE + 0] = aNData[BYTES_PER_REGISTER * NCounter + 2] >> 0 & 0x01;
+            BOvervoltageCell[NCounter  * CELLS_PER_DEVICE + 0] = aNData[BYTES_PER_REGISTER * NCounter + 2] >> 1 & 0x01;
+            BUndervoltageCell[NCounter * CELLS_PER_DEVICE + 1] = aNData[BYTES_PER_REGISTER * NCounter + 2] >> 2 & 0x01;
+            BOvervoltageCell[NCounter  * CELLS_PER_DEVICE + 1] = aNData[BYTES_PER_REGISTER * NCounter + 2] >> 3 & 0x01;
+            BUndervoltageCell[NCounter * CELLS_PER_DEVICE + 2] = aNData[BYTES_PER_REGISTER * NCounter + 2] >> 4 & 0x01;
+            BOvervoltageCell[NCounter  * CELLS_PER_DEVICE + 2] = aNData[BYTES_PER_REGISTER * NCounter + 2] >> 5 & 0x01;
+            BUndervoltageCell[NCounter * CELLS_PER_DEVICE + 3] = aNData[BYTES_PER_REGISTER * NCounter + 2] >> 6 & 0x01;
+            BOvervoltageCell[NCounter  * CELLS_PER_DEVICE + 3] = aNData[BYTES_PER_REGISTER * NCounter + 2] >> 7 & 0x01;
+            BUndervoltageCell[NCounter * CELLS_PER_DEVICE + 4] = aNData[BYTES_PER_REGISTER * NCounter + 3] >> 0 & 0x01;
+            BOvervoltageCell[NCounter  * CELLS_PER_DEVICE + 4] = aNData[BYTES_PER_REGISTER * NCounter + 3] >> 1 & 0x01;
+            BUndervoltageCell[NCounter * CELLS_PER_DEVICE + 5] = aNData[BYTES_PER_REGISTER * NCounter + 3] >> 2 & 0x01;
+            BOvervoltageCell[NCounter  * CELLS_PER_DEVICE + 5] = aNData[BYTES_PER_REGISTER * NCounter + 3] >> 3 & 0x01;
+            BUndervoltageCell[NCounter * CELLS_PER_DEVICE + 6] = aNData[BYTES_PER_REGISTER * NCounter + 3] >> 4 & 0x01;
+            BOvervoltageCell[NCounter  * CELLS_PER_DEVICE + 6] = aNData[BYTES_PER_REGISTER * NCounter + 3] >> 5 & 0x01;
+            BUndervoltageCell[NCounter * CELLS_PER_DEVICE + 7] = aNData[BYTES_PER_REGISTER * NCounter + 3] >> 6 & 0x01;
+            BOvervoltageCell[NCounter  * CELLS_PER_DEVICE + 7] = aNData[BYTES_PER_REGISTER * NCounter + 3] >> 7 & 0x01;
+            BUndervoltageCell[NCounter * CELLS_PER_DEVICE + 8] = aNData[BYTES_PER_REGISTER * NCounter + 4] >> 0 & 0x01;
+            BOvervoltageCell[NCounter  * CELLS_PER_DEVICE + 8] = aNData[BYTES_PER_REGISTER * NCounter + 4] >> 1 & 0x01;
+            BUndervoltageCell[NCounter * CELLS_PER_DEVICE + 9] = aNData[BYTES_PER_REGISTER * NCounter + 4] >> 2 & 0x01;
+            BOvervoltageCell[NCounter  * CELLS_PER_DEVICE + 9] = aNData[BYTES_PER_REGISTER * NCounter + 4] >> 3 & 0x01;
+            BUndervoltageCell[NCounter * CELLS_PER_DEVICE + 10] = aNData[BYTES_PER_REGISTER * NCounter + 4] >> 4 & 0x01;
+            BOvervoltageCell[NCounter  * CELLS_PER_DEVICE + 10] = aNData[BYTES_PER_REGISTER * NCounter + 4] >> 5 & 0x01;
+            
+            BDevThemalShutdown[NCounter]  = aNData[BYTES_PER_REGISTER * NCounter + 5] >> 0 & 0x01;
+            BDevMUXFail[NCounter]         = aNData[BYTES_PER_REGISTER * NCounter + 5] >> 1 & 0x01;
+            NDevHWRevision[NCounter]      = aNData[BYTES_PER_REGISTER * NCounter + 5] >> 4 & 0x0F; 
+            break;
+
+        case RDCFGA:
+            
+            //Placeholder
+            break;
+
+        case RDSCTRL:
+            NSPinState[NCounter * CELLS_PER_DEVICE + 0] = aNData[BYTES_PER_REGISTER * NCounter + 0] >> 0 & 0x0F;
+            NSPinState[NCounter * CELLS_PER_DEVICE + 1] = aNData[BYTES_PER_REGISTER * NCounter + 0] >> 4 & 0x0F;
+            NSPinState[NCounter * CELLS_PER_DEVICE + 2] = aNData[BYTES_PER_REGISTER * NCounter + 1] >> 0 & 0x0F;
+            NSPinState[NCounter * CELLS_PER_DEVICE + 3] = aNData[BYTES_PER_REGISTER * NCounter + 1] >> 4 & 0x0F;
+            NSPinState[NCounter * CELLS_PER_DEVICE + 4] = aNData[BYTES_PER_REGISTER * NCounter + 2] >> 0 & 0x0F;
+            NSPinState[NCounter * CELLS_PER_DEVICE + 5] = aNData[BYTES_PER_REGISTER * NCounter + 2] >> 4 & 0x0F;
+            NSPinState[NCounter * CELLS_PER_DEVICE + 6] = aNData[BYTES_PER_REGISTER * NCounter + 3] >> 0 & 0x0F;
+            NSPinState[NCounter * CELLS_PER_DEVICE + 7] = aNData[BYTES_PER_REGISTER * NCounter + 3] >> 4 & 0x0F;
+            NSPinState[NCounter * CELLS_PER_DEVICE + 8] = aNData[BYTES_PER_REGISTER * NCounter + 4] >> 0 & 0x0F;
+            NSPinState[NCounter * CELLS_PER_DEVICE + 9] = aNData[BYTES_PER_REGISTER * NCounter + 4] >> 4 & 0x0F;
+            NSPinState[NCounter * CELLS_PER_DEVICE + 10] = aNData[BYTES_PER_REGISTER * NCounter + 5] >> 0 & 0x0F;
+            break;
+
+        case RDPWM:
+            NPWMState[NCounter * CELLS_PER_DEVICE + 0] = aNData[BYTES_PER_REGISTER * NCounter + 0] >> 0 & 0x0F;
+            NPWMState[NCounter * CELLS_PER_DEVICE + 1] = aNData[BYTES_PER_REGISTER * NCounter + 0] >> 4 & 0x0F;
+            NPWMState[NCounter * CELLS_PER_DEVICE + 2] = aNData[BYTES_PER_REGISTER * NCounter + 1] >> 0 & 0x0F;
+            NPWMState[NCounter * CELLS_PER_DEVICE + 3] = aNData[BYTES_PER_REGISTER * NCounter + 1] >> 4 & 0x0F;
+            NPWMState[NCounter * CELLS_PER_DEVICE + 4] = aNData[BYTES_PER_REGISTER * NCounter + 2] >> 0 & 0x0F;
+            NPWMState[NCounter * CELLS_PER_DEVICE + 5] = aNData[BYTES_PER_REGISTER * NCounter + 2] >> 4 & 0x0F;
+            NPWMState[NCounter * CELLS_PER_DEVICE + 6] = aNData[BYTES_PER_REGISTER * NCounter + 3] >> 0 & 0x0F;
+            NPWMState[NCounter * CELLS_PER_DEVICE + 7] = aNData[BYTES_PER_REGISTER * NCounter + 3] >> 4 & 0x0F;
+            NPWMState[NCounter * CELLS_PER_DEVICE + 8] = aNData[BYTES_PER_REGISTER * NCounter + 4] >> 0 & 0x0F;
+            NPWMState[NCounter * CELLS_PER_DEVICE + 9] = aNData[BYTES_PER_REGISTER * NCounter + 4] >> 4 & 0x0F;
+            NPWMState[NCounter * CELLS_PER_DEVICE + 10] = aNData[BYTES_PER_REGISTER * NCounter + 5] >> 0 & 0x0F;
+            break;
+
+        case RDCOMM:
+            NDevICCO0[NCounter] = aNData[BYTES_PER_REGISTER * NCounter + 0] >> 4 & 0xF;
+            NDevICCO1[NCounter] = aNData[BYTES_PER_REGISTER * NCounter + 2] >> 4 & 0xF;
+            NDevICCO2[NCounter] = aNData[BYTES_PER_REGISTER * NCounter + 4] >> 4 & 0xF;
+
+            NDevShiftByte0[NCounter] = ((aNData[BYTES_PER_REGISTER * NCounter + 0] >> 0 & 0xF) << 4) | (aNData[BYTES_PER_REGISTER * NCounter + 1] >> 4 & 0xF);
+            NDevShiftByte1[NCounter] = ((aNData[BYTES_PER_REGISTER * NCounter + 2] >> 0 & 0xF) << 4) | (aNData[BYTES_PER_REGISTER * NCounter + 3] >> 4 & 0xF);
+            NDevShiftByte2[NCounter] = ((aNData[BYTES_PER_REGISTER * NCounter + 4] >> 0 & 0xF) << 4) | (aNData[BYTES_PER_REGISTER * NCounter + 5] >> 4 & 0xF);
+
+            NDevFCCO0[NCounter] = aNData[BYTES_PER_REGISTER * NCounter + 1] >> 0 & 0xF;
+            NDevFCCO1[NCounter] = aNData[BYTES_PER_REGISTER * NCounter + 3] >> 0 & 0xF;
+            NDevFCCO2[NCounter] = aNData[BYTES_PER_REGISTER * NCounter + 5] >> 0 & 0xF;
+            break;
+
+        default:
+            return ESP_ERR_INVALID_ARG;
+        }
+    }    
+    return ESP_ERR_INVALID_STATE;
 }

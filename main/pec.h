@@ -1,0 +1,1 @@
+uint16_t PEC15_calc(uint16_t NBytes, const uint8_t *aData) ;

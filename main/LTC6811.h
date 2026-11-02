@@ -4,6 +4,8 @@
 #include "pin.h"
 #include "sfrtypes.h"
 #include "driver/spi_master.h"
+#include "CAN/canDecodeAuto.h"
+#include "pec.h"
 
 #include "string.h"
 #include "esp_err.h"
@@ -18,9 +20,9 @@ Command codes page 61
 esp_err_t LTC6811_init(uint8_t NCSPin);
 esp_err_t BC_Write(uint16_t CMD, uint16_t NBytes, uint8_t *aData);
 esp_err_t BC_Read(uint16_t CMD, uint8_t *aData);
-esp_err_t read_VCell(uint16_t CMD);
-esp_err_t read_Status(uint16_t CMD);
-esp_err_t read_Aux(uint16_t CMD);
+esp_err_t read_VCell(uint16_t NCMD, uint8_t *aNData);
+esp_err_t read_Aux(uint16_t CMD, uint8_t *aNData);
+esp_err_t general_Read(uint16_t NCMD);
 uint16_t PEC15_calc(uint16_t NBytes, const uint8_t *aData); 
 
 /* Global Variables */
