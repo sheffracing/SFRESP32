@@ -350,6 +350,7 @@ bool CAN_receive_callback(twai_node_handle_t stCANBus, const twai_rx_done_event_
     *   16/11/25 CP Respond to Command message
     *   23/11/25 CP Changed to use FreeRTOS queue instead of ring buffer, refactored
     *   03/01/26 CP Added reflash over CAN functionality.
+    *   21/06/26 DH Add memory integrity checks (was overflowing memory)
     *
     *===========================================================================
     */
@@ -378,6 +379,11 @@ bool CAN_receive_callback(twai_node_handle_t stCANBus, const twai_rx_done_event_
     /* Copy frame into buffer */
     stRxedFrame.dwID = (dword)stRxFrame.header.id;
     stRxedFrame.byDLC = (byte)stRxFrame.header.dlc;
+    if (stRxedFrame.byDLC > 8)
+    {
+        ESP_LOGE("CAN", "Invalid CAN frame DLC: %u", stRxedFrame.byDLC);
+        return FALSE;
+    }
     if (stRxedFrame.byDLC > 0)
     {
         memcpy(stRxedFrame.abData, stRxFrame.buffer, stRxFrame.header.dlc);
