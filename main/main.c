@@ -187,8 +187,26 @@ static void timers_init(void)
     ESP_ERROR_CHECK(esp_timer_start_periodic(stTaskInterrupt100ms, INTERRUPT_INTERVAL_100MS)); // 100ms
 }
 
-static void GPIO_init(void)
+void GPIO_init(void)
 {
+    gpio_config_t AntennaConfig = {
+        .pin_bit_mask = 1ULL << 3,
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = 0,
+        .pull_down_en = 0,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    gpio_config(&AntennaConfig);
+
+    gpio_config_t Antenna2Config = {
+        .pin_bit_mask = 1ULL << 14,
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = 0,
+        .pull_down_en = 0,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    gpio_config(&Antenna2Config);
+
     gpio_config_t onboardLEDConfig = {
         .pin_bit_mask = 1ULL << GPIO_ONBOARD_LED,
         .mode = GPIO_MODE_OUTPUT,
