@@ -97,7 +97,6 @@ dword dwTimeSincePowerUpms = 0;
 #define MAX_eREFLASH_TIME_US 300000000 // us
 #define LV_UV_TIMEOUT 50 // *100ms = 5s of undervoltage before shutdown
 #define PWM_MAX_DUTY 2047 // 2^11 - 1 for 11 bit resolution
-#define PWM_MAX_DUTY 2047 // 2^11 - 1 for 11 bit resolution
 #define RTD_DURATION 15 // *100ms = 1.5s of horn after drive enable
 
 /* --------------------------- Functions ----------------------------- */
