@@ -44,4 +44,9 @@
 #define SPI_MCP3204_1_CS 17
 #define SPI_MCP3204_2_CS 16
 
+/* Dash Only */
+#define GPIO_SWITCH_1_IN 0
+#define GPIO_BUTTON_1_IN 1
+#define GPIO_BUTTON_2_IN 2
+
 #endif // SFR_PIN
