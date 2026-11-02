@@ -30,7 +30,8 @@ dword adwMaxTaskTime[eTASK_TOTAL];
 dword adwLastTaskTime[eTASK_TOTAL];
 eTaskState_t astTaskState[eTASK_TOTAL];
 dword dwTimeSincePowerUpms = 0;
-uint8_t atRealTime[7];
+extern uint8_t atRealTime[7];
+extern float imuData[6]; 
 
 /* --------------------------- Definitions ----------------------------- */
 #define PERIOD_TASK_100MS 100   // ms
@@ -94,8 +95,8 @@ void task_1ms(void)
     qwtTaskTimer = esp_timer_get_time();
     astTaskState[eTASK_1MS] = eTASK_ACTIVE;
 
-    /* CAN Rx */
-    CAN_receive(stCANBus0);
+    /* CAN Rx */ //NOT DEFINED
+    //CAN_receive(stCANBus0);
 
     /* CAN error handling */
     CANRxCheck1ms();
@@ -104,7 +105,7 @@ void task_1ms(void)
     dwTimeSincePowerUpms++;
 
     /* Update time */
-
+    
 
     /* Update max task time */
     qwtTaskTimer = esp_timer_get_time() - qwtTaskTimer;
@@ -118,21 +119,33 @@ void task_1ms(void)
 /* Task that runs every 100ms. */
 void task_100ms(void)
 {
+    esp_err_t eState;
     static qword qwtTaskTimer;
     static word wNCounter;
 
     qwtTaskTimer = esp_timer_get_time();
     astTaskState[eTASK_100MS] = eTASK_ACTIVE;
-    eternal_clock_read_time();
 
     /* CAN error handling */
     CANRxCheck1ms();
+
+    //Read and log IMU data
+    imu_read();
+    sdcard_log_imu();
 
     /* Every Second */
     if ( wNCounter % (PERIOD_1S / PERIOD_TASK_100MS) == 0 ) 
     {
         /* Toggle LED */
         pin_toggle(GPIO_ONBOARD_LED); 
+
+        //Update RTC time
+        eState = eternal_clock_read_time();
+        if (eState != ESP_OK && eState != ESP_ERR_INVALID_STATE) 
+        {
+            ESP_LOGE(SFR_TAG, "Failed to read RTC: %s", esp_err_to_name(eState));
+        }
+        sdcard_log_time(); //Log time to SD card
 
         bFlushSDCard = TRUE;
         /* Is CAN Queue Full? */
@@ -143,6 +156,7 @@ void task_100ms(void)
 
         /* Send Status Message */
         /* This is not how you should send a CAN message but in this special case it is better this way */
+        //______________________________TO BE REMOVED WHEN NOT TESTING, LOGGER DOES NOT SEND ANY MESSAGES___________________________________________________________
         CAN_transmit(stCANBus0, &(CAN_frame_t)
         {
             .dwID = DEVICE_ID,
@@ -158,6 +172,7 @@ void task_100ms(void)
                 (byte)(((dwTimeSincePowerUpms/4000) & 0xF) << 4 | (eResetReason & 0x0F)),
             }
         });
+        //_____________________________________________________________________________________________________________________________________________________
     };
 
     /* Every 10 Seconds */
