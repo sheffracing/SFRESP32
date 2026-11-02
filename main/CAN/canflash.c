@@ -8,9 +8,9 @@ This software was written by humans and is licensed under GNU General Public Lic
 #include "canflash.h"
 
 /* --------------------------- Global Variables ----------------------------- */
-dword dwBytesWrittenReflash = 0;
-word dwErrorCountReflash = 0;
-dword dwFirmwareSize = 0;
+uint32_t NBytesWrittenReflash = 0;
+uint16_t NErrorCountReflash = 0;
+uint32_t NFirmwareSize = 0;
 
 /* --------------------------- Definitions ---------------------------------- */
 #define CRC8_POLYNOMIAL 0x12F  //CRC-8-AUTOSTAR polynomial
@@ -23,7 +23,7 @@ dword dwFirmwareSize = 0;
 QueueHandle_t xReflashRingBuffer = NULL;
 
 /* Local Function Prototypes */
-void reflash_enqueue_frame(const CAN_frame_t *stFrame, word wNBytes);
+void reflash_enqueue_frame(const CAN_frame_t *stFrame, uint16_t NBytes);
 
 /* --------------------------- Functions ------------------------------------ */
 esp_err_t CAN_flash_init()
@@ -44,7 +44,7 @@ esp_err_t CAN_flash_init()
     */
 
     /* Allocate Ring Buffer */
-    xReflashRingBuffer = xQueueCreate(REFLASH_QUEUE_LENGTH, sizeof(byte));
+    xReflashRingBuffer = xQueueCreate(REFLASH_QUEUE_LENGTH, sizeof(uint8_t));
     if (xReflashRingBuffer == NULL) {
         ESP_LOGE("CAN", "Failed to create CAN Queue");
         return ESP_ERR_NO_MEM;
@@ -73,7 +73,7 @@ esp_err_t CAN_flash_empty_queue(esp_partition_t *stOTAPartition)
     CAN_frame_t stCANTxFrame;
     stCANTxFrame.dwID = DEVICE_ID;
     esp_err_t eState = ESP_OK;
-    qword qwCANData = 0;
+    uint64_t NCANData = 0;
 
     if (!xCANRingBuffer) 
     {
@@ -87,8 +87,8 @@ esp_err_t CAN_flash_empty_queue(esp_partition_t *stOTAPartition)
         {
             continue;
         }
-        memcpy(&qwCANData, stCANFrame.abData, stCANFrame.byDLC);
-        if (crc8(qwCANData) == 0)
+        memcpy(&NCANData, stCANFrame.abData, stCANFrame.byDLC);
+        if (crc8(NCANData) == 0)
         {
             /* Valid CRC */
             reflash_enqueue_frame(&stCANFrame, stCANFrame.byDLC - 1);
@@ -102,10 +102,10 @@ esp_err_t CAN_flash_empty_queue(esp_partition_t *stOTAPartition)
             /* Invalid CRC - Send NACK and error count */
             stCANTxFrame.byDLC = 3;
             stCANTxFrame.abData[0] = 0x00;
-            stCANTxFrame.abData[1] = (byte)(dwErrorCountReflash & 0xFF);
-            stCANTxFrame.abData[2] = (byte)((dwErrorCountReflash >> 8) & 0xFF);
+            stCANTxFrame.abData[1] = (uint8_t)(NErrorCountReflash & 0xFF);
+            stCANTxFrame.abData[2] = (uint8_t)((NErrorCountReflash >> 8) & 0xFF);
             eState = CAN_transmit(stCANBus0, &stCANTxFrame);
-            dwErrorCountReflash++;
+            NErrorCountReflash++;
         }
     }
     return eState;
@@ -128,8 +128,8 @@ esp_err_t CAN_flash_write(esp_partition_t *stOTAPartition)
     *   09/01/26 CP Added CRC check and ACK/NACK response
     *===========================================================================
     */
-   static qword qwTime = 0;
-   byte abyFlashBuffer[16];
+   static uint64_t tFlashingProgess = 0;
+   uint8_t aFlashBuffer[16];
    esp_err_t eState = ESP_OK;
 
     if (stOTAPartition == NULL)
@@ -145,53 +145,53 @@ esp_err_t CAN_flash_write(esp_partition_t *stOTAPartition)
     if (uxQueueMessagesWaiting(xReflashRingBuffer) >= 16)
     {
         /* Get 16 bytes from reflash buffer */
-        for (word wNCounter = 0; wNCounter < 16; wNCounter++)
+        for (uint16_t NCounter = 0; NCounter < 16; NCounter++)
         {
-            xQueueReceive(xReflashRingBuffer, &abyFlashBuffer[wNCounter], 0);
+            xQueueReceive(xReflashRingBuffer, &aFlashBuffer[NCounter], 0);
         }
 
         /* Write to flash */
-        eState = esp_partition_write(stOTAPartition, dwBytesWrittenReflash, abyFlashBuffer, 16);
+        eState = esp_partition_write(stOTAPartition, NBytesWrittenReflash, aFlashBuffer, 16);
         
         if (eState != ESP_OK)
         {
             ESP_LOGE("CANFLASH", "Failed to write to OTA partition: %s", esp_err_to_name(eState));
             return eState;
         }
-        dwBytesWrittenReflash += 16;
+        NBytesWrittenReflash += 16;
     }
 
     /* Detect if there are less then 16 bytes till the end of the binary. (would get stuck otherwise) */
-    if (dwBytesWrittenReflash + 16 > dwFirmwareSize && dwFirmwareSize > 0)
+    if (NBytesWrittenReflash + 16 > NFirmwareSize && NFirmwareSize > 0)
     {
-        word wNCounter = 0;
-        while (xQueueReceive(xReflashRingBuffer, &abyFlashBuffer[wNCounter], 0) == pdTRUE)
+        uint16_t NCounter = 0;
+        while (xQueueReceive(xReflashRingBuffer, &aFlashBuffer[NCounter], 0) == pdTRUE)
         {
-            wNCounter++;
+            NCounter++;
         }
         /* Write to flash */
-        eState = esp_partition_write(stOTAPartition, dwBytesWrittenReflash, abyFlashBuffer, wNCounter+1);
+        eState = esp_partition_write(stOTAPartition, NBytesWrittenReflash, aFlashBuffer, NCounter+1);
         
         if (eState != ESP_OK)
         {
             ESP_LOGE("CANFLASH", "Failed to write to OTA partition: %s", esp_err_to_name(eState));
             return eState;
         }
-        dwBytesWrittenReflash += wNCounter+1;
+        NBytesWrittenReflash += NCounter+1;
     }
 
     /* Debug Reporting */
-    if (esp_timer_get_time() - qwTime >= 500000) //Every 0.5s
+    if (esp_timer_get_time() - tFlashingProgess >= 500000) //Every 0.5s
     {
-        qwTime = esp_timer_get_time();
+        tFlashingProgess = esp_timer_get_time();
         ESP_LOGI("CANFLASH", "Reflash Progress: %d / %d bytes written, %d waiting in queue",
-            (uint32_t)dwBytesWrittenReflash, (uint32_t)dwFirmwareSize, uxQueueMessagesWaiting(xReflashRingBuffer));
+            (uint32_t)NBytesWrittenReflash, (uint32_t)NFirmwareSize, uxQueueMessagesWaiting(xReflashRingBuffer));
     }
     
     return ESP_OK;
 }
 
-word crc8(qword dwData)
+uint16_t crc8(uint64_t NData)
 {
     /*
     *===========================================================================
@@ -208,20 +208,20 @@ word crc8(qword dwData)
     *===========================================================================
     */
     
-    word wOffset = 63;
-    while (wOffset >= 8)
+    uint16_t NOffset = 63;
+    while (NOffset >= 8)
     {
-        if (dwData & ((qword)1 << wOffset))
+        if (NData & ((uint64_t)1 << NOffset))
         {
-            dwData = ((qword)CRC8_POLYNOMIAL << (wOffset - 8)) ^ dwData;
+            NData = ((uint64_t)CRC8_POLYNOMIAL << (NOffset - 8)) ^ NData;
         }
-        wOffset--;
+        NOffset--;
     }
 
-    return (word)(dwData & 0xFF);
+    return (uint16_t)(NData & 0xFF);
 }
 
-void reflash_enqueue_frame(const CAN_frame_t *stFrame, word wNBytes)
+void reflash_enqueue_frame(const CAN_frame_t *stFrame, uint16_t NBytes)
 {
     /*
     *===========================================================================
@@ -242,13 +242,13 @@ void reflash_enqueue_frame(const CAN_frame_t *stFrame, word wNBytes)
     {
         return;
     }
-    if (wNBytes > stFrame->byDLC)
+    if (NBytes > stFrame->byDLC)
     {
-        wNBytes = stFrame->byDLC;
+        NBytes = stFrame->byDLC;
     }
 
-    for (byte byNCounter = 0; byNCounter < wNBytes; byNCounter++)
+    for (uint8_t NCounter = 0; NCounter < NBytes; NCounter++)
     {
-        xQueueSend(xReflashRingBuffer, &stFrame->abData[byNCounter], 0);
+        xQueueSend(xReflashRingBuffer, &stFrame->abData[NCounter], 0);
     }
 }

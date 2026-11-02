@@ -57,11 +57,10 @@ uint8_t byMACAddress[6] = {0x98, 0xA3, 0x16, 0x85, 0x6C, 0xEC}; // Change to the
 /* --------------------------- Function prototypes --------------------- */
 esp_err_t ESPNOW_init(void);
 esp_err_t NVS_init(void);
-esp_err_t ESPNOW_fill_buffer(const byte *abyData, byte byNDataLength);
-esp_err_t ESPNOW_empty_buffer(void);
 static void ESPNOW_tx_callback(const wifi_tx_info_t *tx_info, esp_now_send_status_t eStatus);
 static void ESPNOW_rx_callback(const esp_now_recv_info_t *recv_info, const uint8_t *byData, int byNLength);
-
+esp_err_t ESPNOW_empty_buffer(void);
+esp_err_t ESPNOW_fill_buffer(const uint8_t *abyData, uint8_t byNDataLength);
 
 /* --------------------------- Functions ----------------------------- */
 esp_err_t ESPNOW_init(void)
@@ -240,7 +239,7 @@ esp_err_t ESPNOW_empty_buffer(void)
     *   Empties the CAN ring buffer by packing as many CAN frames as possible
     *   into a single ESP-NOW packet (250 bytes) and sending it. If there are no
     *   frames to send, it returns ESP_OK. Each CAN frame takes 11 bytes in the
-    *   ESP-NOW packet (2 bytes ID, 1 byte DLC, 8 bytes data). The ring buffer is
+    *   ESP-NOW packet (2 bytes ID, 1 uint8_t DLC, 8 bytes data). The ring buffer is
     *   115 frames in total so it can take up to 3 ESP-NOW packets to empty
     *   the buffer if it is full. This function only sends one ESP-NOW packet per
     *   call, it is intended to be run once per 100ms or so.
@@ -253,13 +252,13 @@ esp_err_t ESPNOW_empty_buffer(void)
     *===========================================================================
     */
 
-    byte byBytesToSend[MAX_ESPNOW_PAYLOAD];
-    dword dwOffset = 0;
+    uint8_t NBytesToSend[MAX_ESPNOW_PAYLOAD];
+    uint32_t NOffset = 0;
     CAN_frame_t stCANFrame;
 
-    for (byte NLoopCounter = 0; NLoopCounter < MAX_ESPNOW_PAYLOAD; NLoopCounter++) 
+    for (uint8_t NLoopCounter = 0; NLoopCounter < MAX_ESPNOW_PAYLOAD; NLoopCounter++) 
     {
-        byBytesToSend[NLoopCounter] = 0;
+        NBytesToSend[NLoopCounter] = 0;
     }
 
     if (!xCANRingBuffer) 
@@ -268,7 +267,7 @@ esp_err_t ESPNOW_empty_buffer(void)
     } 
 
     /* Until the ring buffer is empty or the ESP-NOW message is full, pack the message */ 
-    while (dwOffset + PACKED_FRAME_SIZE <= MAX_ESPNOW_PAYLOAD && xQueueReceive(xCANRingBuffer, &stCANFrame, 0) == pdTRUE)
+    while (NOffset + PACKED_FRAME_SIZE <= MAX_ESPNOW_PAYLOAD && xQueueReceive(xCANRingBuffer, &stCANFrame, 0) == pdTRUE)
     {
         uint8_t byDLC = stCANFrame.byDLC;
         if (byDLC > 8 || byDLC < 1) 
@@ -277,23 +276,23 @@ esp_err_t ESPNOW_empty_buffer(void)
             break;
         }
 
-        byBytesToSend[dwOffset + 0] = (byte)((stCANFrame.dwID >> 8) & 0xFF);
-        byBytesToSend[dwOffset + 1] = (byte)(stCANFrame.dwID & 0xFF);
-        byBytesToSend[dwOffset + 2] = (byte)byDLC;
-        memcpy(&byBytesToSend[dwOffset + 3], stCANFrame.abData, byDLC);
-        dwOffset += 3 + byDLC; // 2 bytes ID + 1 byte DLC + 1-8 bytes data
+        NBytesToSend[NOffset + 0] = (uint8_t)((stCANFrame.dwID >> 8) & 0xFF);
+        NBytesToSend[NOffset + 1] = (uint8_t)(stCANFrame.dwID & 0xFF);
+        NBytesToSend[NOffset + 2] = (uint8_t)byDLC;
+        memcpy(&NBytesToSend[NOffset + 3], stCANFrame.abData, byDLC);
+        NOffset += 3 + byDLC; // 2 bytes ID + 1 byte DLC + 1-8 bytes data
     }
 
     /* If data is present send it otherwise return ESP_OK */
-    if (dwOffset > 0) 
+    if (NOffset > 0) 
     {
-        return esp_now_send(byMACAddress, byBytesToSend, dwOffset);
+        return esp_now_send(byMACAddress, NBytesToSend, NOffset);
     }
     
     return ESP_OK;
 }
 
-esp_err_t ESPNOW_fill_buffer(const byte *abyData, byte byNDataLength)
+esp_err_t ESPNOW_fill_buffer(const uint8_t *abyData, uint8_t byNDataLength)
 {
     /*
     *===========================================================================

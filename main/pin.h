@@ -18,8 +18,8 @@
 #define SPI2_MOSI   2
 
 /* CAN */
-#define CAN0_TX     0
-#define CAN0_RX     1
+#define GPIO_CAN0_TX     0
+#define GPIO_CAN0_RX     1
 
 /* LEDs */
 #define LED1        10 //Red

@@ -10,7 +10,7 @@
 #include "esp_log.h"
 
 /* --------------------------- Function prototypes -------------------- */
-esp_err_t MCP320X_init(word wNDevices, uint8_t abyNCSPins[], spi_device_handle_t astDeviceHandles[]);
+esp_err_t MCP320X_init(uint8_t NCSPin, spi_device_handle_t stDeviceHandle);
 float MCP320X_read(spi_device_handle_t stDeviceHandle, uint8_t NDevADC);
 
 #endif

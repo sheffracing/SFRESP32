@@ -11,12 +11,12 @@
 
 esp_err_t CAN_flash_empty_queue(esp_partition_t *stOTAPartition);
 esp_err_t CAN_flash_write(esp_partition_t *stOTAPartition);
-dword CAN_flash_get_size();
+uint32_t CAN_flash_get_size();
 esp_err_t CAN_flash_init();
-word crc8(qword dwData);
+uint16_t crc8(uint64_t NData);
 
-extern dword dwBytesWrittenReflash;
-extern word dwErrorCountReflash;
-extern dword dwFirmwareSize;
+extern uint32_t NBytesWrittenReflash;
+extern uint16_t NErrorCountReflash;
+extern uint32_t NFirmwareSize;
 
 #endif

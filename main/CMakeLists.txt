@@ -1,2 +1,2 @@
-idf_component_register(SRCS "LTC6811.c" "mcp320X.c" "CAN/canDecodeAuto.c" "CAN/canflash.c" "I2C.c" "adc.c" "contactors.c" "sdcard.c" "espnow.c" "main.c" "tasks.c" "CAN/can.c" "NVHDisplay.c" "NVHDisplay/EVE_commands.c" "NVHDisplay/EVE_target.c" "NVHDisplay/EVE_supplemental.c"
+idf_component_register(SRCS "LTC6811.c" "mcp320X.c" "CAN/canDecodeAuto.c" "CAN/canflash.c" "I2C.c" "adc.c" "sdcard.c" "espnow.c" "main.c" "tasks.c" "CAN/can.c" "NVHDisplay.c" "NVHDisplay/EVE_commands.c" "NVHDisplay/EVE_target.c" "NVHDisplay/EVE_supplemental.c"
 )

@@ -9,6 +9,7 @@ This software was written by humans and is licensed under GNU General Public Lic
 
 #include "I2C.h"
 
+# ifdef I2C0_SDA
 /* --------------------------- Global Variables ----------------------------- */
 i2c_master_bus_handle_t stI2C0Handle;
 i2c_master_dev_handle_t stI2C0Dev0Handle; //RTC PCF2129

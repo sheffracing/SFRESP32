@@ -61,34 +61,6 @@ to try and understand what VRear refers to. Much better to just have
 VRWSecondElement so we know its the volume of the rear wings second element
 immediately.
 
-Notes for c programming:
-SFR uses a few custom data types when coding in c. Firstly TRUE and FALSE are defined.
-Boolean - 1bit an int under the hood.
-byte - 8bits a char under the hood.
-word - 16bits a short under the hood.
-dowrd - 32bits a long.
-qword - 64 bits a long long.
-
-byte, word, dword, qword have signed variants as well (sbyte, sword, sdword and sqword)
-Using these data types saves memory allocation.
-
-Variable names in c should have the data type as a prefix in addition to the standard 
-variable name. Sometimes a variable is abstract and does not fit into a physical property,
-in these cases the physical property prefix can be dropped. This is often the case with 
-structures.
-
-Standard prefixes:
-byte		:b
-sbyte		:sb
-word		:w
-sword		:sw
-dword		:dw
-sdword		:sdw
-qword		:qw
-sqword		:sqw
-float		:f
-structure	:st
-
 Definitions should be all capital and use underscores between words eg: #define MY_DEFINITION_1 1
 Function names should be simple and use underscores between words eg: my_function_1
 Acronyms in function names may be capitalised eg: CAN, GPIO, etc

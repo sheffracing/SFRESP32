@@ -190,7 +190,7 @@ static void timers_init(void)
 static void GPIO_init(void)
 {
     gpio_config_t onboardLEDConfig = {
-        .pin_bit_mask = 1ULL << GPIO_ONBOARD_LED,
+        .pin_bit_mask = 1ULL << LED1,
         .mode = GPIO_MODE_OUTPUT,
         .pull_up_en = 0,
         .pull_down_en = 0,

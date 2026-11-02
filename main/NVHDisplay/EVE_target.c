@@ -65,7 +65,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 #include "EVE_target_ESP32.h"
-
+#ifdef EVE_CS
 #if !defined (ARDUINO)
 
 #include "EVE_commands.h"
@@ -1154,4 +1154,5 @@ void EVE_deinit_gpio(void)
 
 #endif /* LINUX_LIBGPIOD */
 
+#endif
 #endif

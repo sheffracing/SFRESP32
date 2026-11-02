@@ -45,7 +45,6 @@ esp_err_t MCP320X_init(uint8_t NCSPin, spi_device_handle_t stDeviceHandle)
     *===========================================================================
     */
     esp_err_t eStatus = ESP_OK;
-    word wNCounter = 0;
     spi_device_interface_config_t stDeviceConfig = 
     {
         .clock_speed_hz = MCP3208_SPI_FREQ,
@@ -84,7 +83,7 @@ float MCP320X_read(spi_device_handle_t stDeviceHandle, uint8_t NDevADC)
     */
     esp_err_t eStatus = ESP_OK;
     spi_transaction_t stSPICall;
-    word wNData;
+    uint16_t NData;
     uint8_t NDataTx[3];
     uint8_t NDataRx[3];
     float fVADCRaw; 
@@ -94,9 +93,9 @@ float MCP320X_read(spi_device_handle_t stDeviceHandle, uint8_t NDevADC)
     }
 
     // Alignment Logic for 24 clocks (3 bytes):
-    // Byte 0: 0 0 0 0 0 S M D2
-    // Byte 1: D1 D0 N N B11 B10 B9 B8
-    // Byte 2: B7 B6 B5 B4 B3 B2 B1 B0
+    // uint8_t 0: 0 0 0 0 0 S M D2
+    // uint8_t 1: D1 D0 N N B11 B10 B9 B8
+    // uint8_t 2: B7 B6 B5 B4 B3 B2 B1 B0
     // Where S is start bit (1), M is mode (0 for single-ended, 1 for differential), D2-D0 are the channel selection bits, 
     // N is null bit, and B11-B0 are the 12-bit ADC result.
 
@@ -111,8 +110,8 @@ float MCP320X_read(spi_device_handle_t stDeviceHandle, uint8_t NDevADC)
     if (eStatus != ESP_OK)    {
         return 999.9;
     }
-    wNData = ((NDataRx[1] & 0xF) << 8) | NDataRx[2];
-    fVADCRaw = (float)wNData / 4096.0 * (float)VADC_REFERNCE;
+    NData = ((NDataRx[1] & 0xF) << 8) | NDataRx[2];
+    fVADCRaw = (float)NData / 4096.0 * (float)VADC_REFERNCE;
     return fVADCRaw;
 
 }
