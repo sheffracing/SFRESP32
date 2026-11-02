@@ -13,12 +13,17 @@ static const char *SD_MOUNT_POINT = "/sdcard";
 static char abyFilePath[64] = "/sdcard/log000.bin";
 
 /* --------------------------- Local Variables ------------------------------ */
+extern uint8_t atRealTime[7];
+extern float imuData[6]; 
 extern dword dwTimeSincePowerUpms;
+extern QueueHandle_t xCANRingBuffer;
 FILE *stFile;
 
 /* --------------------------- Function prototypes -------------------------- */
 esp_err_t SD_card_init(void);
 esp_err_t sdcard_empty_buffer(void);
+esp_err_t sdcard_log_imu(void);
+esp_err_t sdcard_log_time(void);
 
 /* --------------------------- Definitions ---------------------------------- */
 #define MAX_FILES 5
@@ -35,13 +40,25 @@ typedef struct __attribute__((packed)) {
     uint16_t dwID;
     uint8_t  byDLC;
     uint8_t  abData[8];
-} BinLogEntry_t;
+} BinLogEntryCan_t;
+
+typedef struct __attribute__((packed)) {
+    byte     type;
+    uint8_t atRealTime[7];
+} BinLogEntryTime_t;
+
+typedef struct __attribute__((packed)) {
+    byte     type;
+    float  afData[6];
+} BinLogEntryIMU_t;
 
 typedef enum {
     CAN = 0x01,
     CAN_FD,
     CAN_STATE,
     ETERNAL_CLOCK,
+    IMU,
+    TIME
 } eLogEntryType_t;
 
 /* --------------------------- Functions ------------------------------------ */
@@ -60,6 +77,7 @@ esp_err_t SD_card_init(void)
     *   Revision History:
     *   20/10/25 CP Initial Version
     *   25/11/25 CP Switch to asc format
+    *   21/06/26 DH Timestamp logs with RTC time
     *
     *===========================================================================
     */
@@ -131,14 +149,27 @@ esp_err_t SD_card_init(void)
     {
         static char acBuffer[WRITE_BUFFER_SIZE];
         setvbuf(stFile, acBuffer, _IOFBF, sizeof(acBuffer));
-    }
+        byte byFileSpecVersion = FILE_SPEC_VERSION;
+        byte abyTimeData[6] = {
+            atRealTime[0] & 0x7F,  // Seconds
+            atRealTime[1] & 0x7F,  // Minutes
+            atRealTime[2] & 0x3F,  // Hours
+            atRealTime[3] & 0x3F,  // Day
+            atRealTime[5] & 0x1F,  // Month
+            atRealTime[6] & 0xFF   // Year
+        };
+        byte abReserved[9] = {0};
+        fwrite(&byFileSpecVersion, sizeof(byFileSpecVersion), 1, stFile);
+        fwrite(&abyTimeData, sizeof(abyTimeData), 1, stFile);
+        fwrite(&abReserved, sizeof(abReserved), 1, stFile);
 
-    byte byFileSpecVersion = FILE_SPEC_VERSION;
-    byte abyTimeData[6] = {0};
-    byte abReserved[9] = {0};
-    fwrite(&byFileSpecVersion, sizeof(byFileSpecVersion), 1, stFile);
-    fwrite(&abyTimeData, sizeof(abyTimeData), 1, stFile);
-    fwrite(&abReserved, sizeof(abReserved), 1, stFile);
+        fflush(stFile);
+        ESP_LOGI("SDCARD", "File log header successfully flushed to disk.");
+    } else
+    {
+        ESP_LOGE("SDCARD", "Failed to create or open log file.");
+        return ESP_FAIL;
+    }
 
    return eStatus;
 }
@@ -162,26 +193,30 @@ esp_err_t sdcard_empty_buffer(void)
     *   25/11/25 CP Changed to use FreeRTOS queue
     *   26/11/25 CP Switch to asc format
     *   27/11/25 CP Switch to binary format
+    *   17/06/26 DH Update to separate logs
     *
     *===========================================================================
     */
 
     CAN_frame_t stCANFrame; 
-    BinLogEntry_t stLogEntry;
+    BinLogEntryCan_t stLogEntry;
     word wNWrites = 0;
 
     if (!xCANRingBuffer) 
     {
+        ESP_LOGE("SDCARD", "CAN ring buffer not initialized");
         return ESP_ERR_INVALID_STATE;
     }
    
     if (uxQueueMessagesWaiting(xCANRingBuffer) == 0)
     {
+        //ESP_LOGI("SDCARD", "CAN ring buffer is empty");
         return ESP_OK;
     }
 
     if (stFile == NULL)
     {
+        ESP_LOGE("SDCARD", "Failed to open log file");
         return ESP_FAIL;
     }
 
@@ -195,7 +230,76 @@ esp_err_t sdcard_empty_buffer(void)
         stLogEntry.dwID = stCANFrame.dwID;
         stLogEntry.byDLC = stCANFrame.byDLC;
         memcpy(stLogEntry.abData, stCANFrame.abData, 8);
-        fwrite(&stLogEntry, sizeof(BinLogEntry_t), 1, stFile);
+        fwrite(&stLogEntry, sizeof(BinLogEntryCan_t), 1, stFile);
+        //ESP_LOGI("SDCARD", "Wrote CAN frame to log file");
     }
     return ESP_OK;
+}
+
+esp_err_t sdcard_log_imu(void){
+    /*
+    *===========================================================================
+    *   sdcard_log_imu
+    *   Takes:   None
+    * 
+    *   Returns: eStatus - ESP_OK if successful, error code if not.
+    * 
+    *   Logs the IMU data to the sdcard. Called once per ms.
+    * 
+    *=========================================================================== 
+    *   Revision History:
+    *   17/06/26 DH Initial Version
+    *
+    *===========================================================================
+    */
+
+    BinLogEntryIMU_t stLogEntry;
+
+    if (stFile == NULL)
+    {
+        ESP_LOGE("SDCARD", "Failed to open log file");
+        return ESP_FAIL;
+    }
+
+    stLogEntry.type = IMU;
+    memcpy(stLogEntry.afData, imuData, sizeof(imuData));
+    fwrite(&stLogEntry, sizeof(BinLogEntryIMU_t), 1, stFile);
+    //ESP_LOGI("SDCARD", "Wrote IMU data to log file");
+
+    return ESP_OK;
+
+}
+
+esp_err_t sdcard_log_time(void){
+    /*
+    *===========================================================================
+    *   sdcard_log_time
+    *   Takes:   None
+    * 
+    *   Returns: eStatus - ESP_OK if successful, error code if not.
+    * 
+    *   Logs the time from the RTC to the sdcard. Called once per second.
+    * 
+    *=========================================================================== 
+    *   Revision History:
+    *   22/06/26 DH Initial Version
+    *
+    *===========================================================================
+    */
+
+    BinLogEntryTime_t stLogEntry;
+
+    if (stFile == NULL)
+    {
+        ESP_LOGE("SDCARD", "Failed to open log file");
+        return ESP_FAIL;
+    }
+
+    stLogEntry.type = TIME;
+    memcpy(stLogEntry.atRealTime, atRealTime, 7);
+    fwrite(&stLogEntry, sizeof(BinLogEntryTime_t), 1, stFile);
+    //ESP_LOGI("SDCARD", "Wrote time to log file");
+
+    return ESP_OK;
+
 }

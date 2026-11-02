@@ -10,7 +10,6 @@ Written by Cole Perera and Aditya Parnandi for Sheffield Formula Racing 2025
 This software was written by humans and is licensed under GNU General Public License v3.0. See LICENSE.txt for more details.
 */
 #include "tasks.h"
-#include "freertos/queue.h"
 
 /* --------------------------- Local Types ----------------------------- */
 
@@ -20,17 +19,12 @@ extern uint8_t byMACAddress[6];
 extern esp_reset_reason_t eResetReason;
 extern eChipMode_t eDeviceMode;
 static esp_partition_t *stOTAPartition = NULL;
-extern FILE *stFile;
-extern QueueHandle_t xCANRingBuffer;
-extern dword dwNDroppedCANFrames;
-boolean bFlushSDCard = FALSE;
 
 /* --------------------------- Global Variables ----------------------------- */
 dword adwMaxTaskTime[eTASK_TOTAL];
 dword adwLastTaskTime[eTASK_TOTAL];
 eTaskState_t astTaskState[eTASK_TOTAL];
 dword dwTimeSincePowerUpms = 0;
-uint8_t atRealTime[7];
 
 /* --------------------------- Definitions ----------------------------- */
 #define PERIOD_TASK_100MS 100   // ms
@@ -41,9 +35,7 @@ uint8_t atRealTime[7];
 /* --------------------------- Functions ----------------------------- */
 /* Background task that runs as often as processor time is available. */
 void task_BG(void)
-{
-    esp_err_t eState;
-    /* Background task that runs as often as processor time is available. */
+{ 
     static qword qwtTaskTimer;
     qwtTaskTimer = esp_timer_get_time();
     astTaskState[eTASK_BG] = eTASK_ACTIVE;
@@ -68,16 +60,6 @@ void task_BG(void)
         }
     }
 
-    eState = sdcard_empty_buffer();
-    if (eState != ESP_OK && eState != ESP_ERR_INVALID_STATE) 
-    {
-        ESP_LOGE(SFR_TAG, "Failed to empty SD card buffer: %s", esp_err_to_name(eState));
-    }
-    if (bFlushSDCard && stFile != NULL) {
-        fsync(fileno(stFile));
-        bFlushSDCard = FALSE;
-    }
-
     /* Update max task time */
     qwtTaskTimer = esp_timer_get_time() - qwtTaskTimer;
     adwLastTaskTime[eTASK_BG] = (dword)qwtTaskTimer;
@@ -94,17 +76,11 @@ void task_1ms(void)
     qwtTaskTimer = esp_timer_get_time();
     astTaskState[eTASK_1MS] = eTASK_ACTIVE;
 
-    /* CAN Rx */
-    CAN_receive(stCANBus0);
-
     /* CAN error handling */
     CANRxCheck1ms();
 
     /* Update time since power up */
     dwTimeSincePowerUpms++;
-
-    /* Update time */
-
 
     /* Update max task time */
     qwtTaskTimer = esp_timer_get_time() - qwtTaskTimer;
@@ -118,12 +94,12 @@ void task_1ms(void)
 /* Task that runs every 100ms. */
 void task_100ms(void)
 {
+    
     static qword qwtTaskTimer;
     static word wNCounter;
 
     qwtTaskTimer = esp_timer_get_time();
     astTaskState[eTASK_100MS] = eTASK_ACTIVE;
-    eternal_clock_read_time();
 
     /* CAN error handling */
     CANRxCheck1ms();
@@ -133,13 +109,6 @@ void task_100ms(void)
     {
         /* Toggle LED */
         pin_toggle(GPIO_ONBOARD_LED); 
-
-        bFlushSDCard = TRUE;
-        /* Is CAN Queue Full? */
-        if (dwNDroppedCANFrames > 0)
-        {
-            ESP_LOGW(SFR_TAG, "%d CAN frames dropped due to full buffer", (int)dwNDroppedCANFrames);
-        }
 
         /* Send Status Message */
         /* This is not how you should send a CAN message but in this special case it is better this way */
