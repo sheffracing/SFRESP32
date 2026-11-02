@@ -267,3 +267,5 @@ esp_err_t imu_read(void)
 
     return ESP_OK;
 }
+
+#endif
