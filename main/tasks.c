@@ -82,6 +82,9 @@ void task_1ms(void)
     /* Update time since power up */
     dwTimeSincePowerUpms++;
 
+    CAN_empty_ESPNOW_buffer(stCANBus0);
+    ESPNOW_empty_buffer();
+
     /* Update max task time */
     qwtTaskTimer = esp_timer_get_time() - qwtTaskTimer;
     adwLastTaskTime[eTASK_1MS] = (dword)qwtTaskTimer;
