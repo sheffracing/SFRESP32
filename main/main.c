@@ -209,6 +209,7 @@ static void GPIO_init(void)
         .intr_type = GPIO_INTR_DISABLE
     };
     gpio_config(&hornPinConfig);
+    gpio_set_level(CONTROL_HORN, 0);
     gpio_config_t relayPinConfig = {
         .pin_bit_mask = 1ULL << CONTROL_RELAY,
         .mode = GPIO_MODE_OUTPUT,
@@ -221,9 +222,9 @@ static void GPIO_init(void)
 
     ledc_timer_config_t stLedcTimerConfig = {
         .speed_mode = LEDC_LOW_SPEED_MODE,
-        .duty_resolution = LEDC_TIMER_13_BIT,
+        .duty_resolution = LEDC_TIMER_11_BIT,
         .timer_num = LEDC_TIMER_0,
-        .freq_hz = 1000, // 1kHz
+        .freq_hz = 5000, // 5kHz
         .clk_cfg = LEDC_AUTO_CLK,
         .deconfigure = false,
     };

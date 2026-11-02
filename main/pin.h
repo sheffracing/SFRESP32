@@ -47,10 +47,10 @@
 
 /* PDU Only */
 #define SPI_MCP3208_CS 17
-#define CONTROL_RADFAN 0
-#define CONTROL_HORN 1
-#define CONTROL_PUMP 2
-#define CONTROL_ACCUFAN 21
-#define CONTROL_RELAY 22
+#define CONTROL_RADFAN 0 // Extra 1
+#define CONTROL_HORN 1 // Extra 2
+#define CONTROL_PUMP 2 // Pump 1 and 2
+#define CONTROL_ACCUFAN 21 // Fan 1 and 2
+#define CONTROL_RELAY 22 // Relay
 
 #endif // SFR_PIN

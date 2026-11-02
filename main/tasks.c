@@ -96,6 +96,8 @@ dword dwTimeSincePowerUpms = 0;
 #define PERIOD_1S 1000          // ms
 #define MAX_eREFLASH_TIME_US 300000000 // us
 #define LV_UV_TIMEOUT 50 // *100ms = 5s of undervoltage before shutdown
+#define PWM_MAX_DUTY 2047 // 2^11 - 1 for 11 bit resolution
+#define PWM_MAX_DUTY 2047 // 2^11 - 1 for 11 bit resolution
 
 /* --------------------------- Functions ----------------------------- */
 /* Background task that runs as often as processor time is available. */
@@ -192,11 +194,11 @@ void task_1ms(void)
     }
 
     /* setting duty cycles */
-    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, rRadFanDuty);
+    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, (rRadFanDuty*PWM_MAX_DUTY)/100);
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
-    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, rPumpDuty[0]);
+    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1, (rPumpDuty[0]*PWM_MAX_DUTY)/100);
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_1);
-    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2, rAccuFanDuty[0]);
+    ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2, (rAccuFanDuty[0]*PWM_MAX_DUTY)/100);
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_2);
 
     /* Update max task time */
@@ -211,11 +213,11 @@ void task_1ms(void)
 /* Task that runs every 100ms. */
 void task_100ms(void)
 {
-    
     static qword qwtTaskTimer;
     static word wNCounter;
     static word wNUndervoltageTimeout;
     float VIRawADC[6];
+    static bool BDriveEnableLocal = FALSE;
 
     qwtTaskTimer = esp_timer_get_time();
     astTaskState[eTASK_100MS] = eTASK_ACTIVE;
