@@ -111,7 +111,7 @@ void task_1ms(void)
     }
 
     /* This actually checkes if drift is > diff + 1 because of int cast */
-    BAPPSDrift = (abs(rAPPs[0] - rAPPs[1]) > APPS_MAX_DIFFERENCE) ? TRUE : FALSE;
+    BAPPSDrift = (fabsf(rAPPs[0] - rAPPs[1]) > APPS_MAX_DIFFERENCE) ? TRUE : FALSE;
     BThrottleOK = !(BAPPSFail[0] || BAPPSFail[1] || BAPPSDrift);
 
     /* Calculate and send throttle if checks pass */
