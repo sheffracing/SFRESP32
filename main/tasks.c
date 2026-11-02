@@ -74,14 +74,6 @@ stSensorMap_t stAPPS2Map = {
         90.0f, 91.0f, 92.0f, 93.0f, 94.0f, 95.0f, 96.0f, 97.0f, 98.0f, 99.0f, 100.0f}},
 };
 
-boolean BAPPS1Fail = FALSE;
-boolean BAPPS2Fail = FALSE;
-boolean BAPPSDrift = FALSE;
-boolean BThrottleValid = FALSE;
-float frAPPs1 = 0.0f;
-float frAPPs2 = 0.0f;
-float frAPPsFinal = 0.0f;
-
 /* --------------------------- Global Variables ----------------------------- */
 dword adwMaxTaskTime[eTASK_TOTAL];
 dword adwLastTaskTime[eTASK_TOTAL];
@@ -144,31 +136,31 @@ void task_1ms(void)
     CANRxCheck1ms();
 
     /* Read Sensor 1 */
-    frAPPs1 = read_sensor(&stADCHandle0, &stAPPS1Map);
-    if (frAPPs1 == -999.0f)
+    rAPPs[0] = read_sensor(&stADCHandle0, &stAPPS1Map);
+    if (rAPPs[0] == -999.0f)
     {
         /* Sensor Error */
-        BAPPS1Fail = TRUE;
+        BAPPSFail[0] = TRUE;
     }
     else
     {
-        BAPPS1Fail = FALSE;
+        BAPPSFail[0] = FALSE;
     }
 
     /* Read Sensor 2 */
-    frAPPs2 = read_sensor(&stADCHandle1, &stAPPS2Map);
-    if (frAPPs2 == -999.0f)
+    rAPPs[1] = read_sensor(&stADCHandle1, &stAPPS2Map);
+    if (rAPPs[1] == -999.0f)
     {
         /* Sensor Error */
-        BAPPS2Fail = TRUE;
+        BAPPSFail[1] = TRUE;
     }
     else
     {
-        BAPPS2Fail = FALSE;
+        BAPPSFail[1] = FALSE;
     }
 
     /* This actually checkes if drift is > diff + 1 because of int cast */
-    if (abs(frAPPs1 - frAPPs2) > APPS_MAX_DIFFERENCE)
+    if (abs(rAPPs[0] - rAPPs[1]) > APPS_MAX_DIFFERENCE)
     {
         /* Sensor Error */
         BAPPSDrift = TRUE;
@@ -176,20 +168,20 @@ void task_1ms(void)
     else
     {
         BAPPSDrift = FALSE;
-        frAPPsFinal = (frAPPs1 + frAPPs2) / 2.0f;
+        rAPPsFinal = (rAPPs[0] + rAPPs[1]) / 2.0f;
     }
 
-    BThrottleValid = !(BAPPS1Fail || BAPPS2Fail || BAPPSDrift);
+    BThrottleOK = !(BAPPSFail[0] || BAPPSFail[1] || BAPPSDrift);
 
-    if (BThrottleValid)
+    if (BThrottleOK)
     {
         CAN_transmit(stCANBus0, &(CAN_frame_t)
         {
             .dwID = 0x05,
             .byDLC = 2,
             .abData = {
-                (byte)((int)(frAPPsFinal * 10) >> 8 & 0xFF),          
-                (byte)((int)(frAPPsFinal * 10) & 0xFF),
+                (byte)((int)(rAPPsFinal * 10) >> 8 & 0xFF),          
+                (byte)((int)(rAPPsFinal * 10) & 0xFF),
             }
         });
     }
@@ -220,7 +212,7 @@ void task_100ms(void)
     CANRxCheck1ms();
 
     /* If APPS is ok send inverter enable message */
-    if (BThrottleValid)
+    if (BThrottleOK)
     {
         CAN_transmit(stCANBus0, &(CAN_frame_t)
         {
@@ -268,10 +260,10 @@ void task_100ms(void)
             .dwID = 0xA0,
             .byDLC = 4,
             .abData = {
-                (int8_t)(frAPPs1),
-                (int8_t)(frAPPs2),
-                (int8_t)(frAPPsFinal),
-                (byte)((BThrottleValid << 4) | (BAPPS1Fail << 2) | (BAPPS2Fail << 1) | (BAPPSDrift << 0))
+                (int8_t)(rAPPs[0]),
+                (int8_t)(rAPPs[1]),
+                (int8_t)(rAPPsFinal),
+                (byte)((BThrottleOK << 4) | (BAPPSFail[0] << 2) | (BAPPSFail[1] << 1) | (BAPPSDrift << 0))
             }
         });
 
