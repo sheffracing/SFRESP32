@@ -7,8 +7,8 @@
 #define GPIO_ONBOARD_LED 15
 
 // for Screen PCB, the RX and TX pins are different 
-#define GPIO_CAN0_TX 16
-#define GPIO_CAN0_RX 17
+#define GPIO_CAN0_TX 23
+#define GPIO_CAN0_RX 22
 
 // #define GPIO_CAN1_TX XX
 // #define GPIO_CAN1_RX XX
