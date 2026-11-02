@@ -126,11 +126,11 @@ static void main_init(void)
     eStatus = spi_bus_initialize(SPI2_HOST, &stBusConfig, SPI_DMA_CH_AUTO);
 
     /* SD Card */
-    eStatus = SD_card_init();
-    if (eStatus != ESP_OK)
-    {
-        ESP_LOGE(SFR_TAG, "Failed to initialise SD Card: %s", esp_err_to_name(eStatus));
-    }
+    // eStatus = SD_card_init();
+    // if (eStatus != ESP_OK)
+    // {
+    //     ESP_LOGE(SFR_TAG, "Failed to initialise SD Card: %s", esp_err_to_name(eStatus));
+    // }
 
     /* ADC MCP3204/8 This is a example config is required */
     // uint8_t aNCSPins[2] = {SPI_MCP3204_1_CS, SPI_MCP3204_2_CS};
@@ -159,6 +159,7 @@ static void main_init(void)
     {
         ESP_LOGE(SFR_TAG, "Failed to initialise I2C: %s", esp_err_to_name(eStatus));
     }
+    eternal_clock_write_time(2026, 6, 15, 14, 10, 0);
 
     /* ADC */
     

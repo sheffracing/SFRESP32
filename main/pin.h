@@ -20,7 +20,6 @@
 #define SPI_SD_CS 17
 #define I2C0_SCL 2
 #define I2C0_SDA 21
-
 /* Wheel Only */
 #define EVE_PDN 16
 #define EVE_CS 17
