@@ -98,6 +98,7 @@ dword dwTimeSincePowerUpms = 0;
 #define LV_UV_TIMEOUT 50 // *100ms = 5s of undervoltage before shutdown
 #define PWM_MAX_DUTY 2047 // 2^11 - 1 for 11 bit resolution
 #define PWM_MAX_DUTY 2047 // 2^11 - 1 for 11 bit resolution
+#define RTD_DURATION 15 // *100ms = 1.5s of horn after drive enable
 
 /* --------------------------- Functions ----------------------------- */
 /* Background task that runs as often as processor time is available. */
@@ -218,6 +219,7 @@ void task_100ms(void)
     static word wNUndervoltageTimeout;
     float VIRawADC[6];
     static bool BDriveEnableLocal = FALSE;
+    static word tSinceHornStart = RTD_DURATION;
 
     qwtTaskTimer = esp_timer_get_time();
     astTaskState[eTASK_100MS] = eTASK_ACTIVE;
@@ -254,6 +256,32 @@ void task_100ms(void)
     PDUStats1Tx(stCANBus0);
     PDUStats2Tx(stCANBus0);
     PDUStats3Tx(stCANBus0);
+
+    /* Ready to drive sound */
+    if (BDriveEnableLocal)
+    {
+        /* Detects fallind edge of Drive_enable */
+        if (!Drive_enable && !BInverter_MISCInError)
+        {
+            BDriveEnableLocal = FALSE;
+        }
+    } else
+    {
+        /* Detects rising edge of Drive_enable */
+        if (Drive_enable && !BInverter_MISCInError)
+        {
+            BDriveEnableLocal = TRUE;
+            tSinceHornStart = 0;
+        }
+    }
+    if (tSinceHornStart < RTD_DURATION)
+    {
+        tSinceHornStart++;
+        gpio_set_level(CONTROL_HORN, 1);
+    } else
+    {
+        gpio_set_level(CONTROL_HORN, 0);
+    }
 
     /* Every Second */
     if ( wNCounter % (PERIOD_1S / PERIOD_TASK_100MS) == 0 ) 
