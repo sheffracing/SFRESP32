@@ -41,7 +41,7 @@ void task_BG(void)
     astTaskState[eTASK_BG] = eTASK_ACTIVE;
 
     /* Flush CAN buffer to SD card */
-    sdcard_flush_can_buffer();
+    sdcard_empty_buffer();
 
     /* Service the watchdog if all task have been completed at least once */
     word wNTaskCounter = 0;
