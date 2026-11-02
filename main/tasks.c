@@ -10,7 +10,6 @@ Written by Cole Perera and Aditya Parnandi for Sheffield Formula Racing 2025
 This software was written by humans and is licensed under GNU General Public License v3.0. See LICENSE.txt for more details.
 */
 #include "tasks.h"
-#include "freertos/queue.h"
 
 /* --------------------------- Local Types ----------------------------- */
 
@@ -20,18 +19,12 @@ extern uint8_t byMACAddress[6];
 extern esp_reset_reason_t eResetReason;
 extern eChipMode_t eDeviceMode;
 static esp_partition_t *stOTAPartition = NULL;
-extern FILE *stFile;
-extern QueueHandle_t xCANRingBuffer;
-extern dword dwNDroppedCANFrames;
-boolean bFlushSDCard = FALSE;
 
 /* --------------------------- Global Variables ----------------------------- */
 dword adwMaxTaskTime[eTASK_TOTAL];
 dword adwLastTaskTime[eTASK_TOTAL];
 eTaskState_t astTaskState[eTASK_TOTAL];
 dword dwTimeSincePowerUpms = 0;
-extern uint8_t atRealTime[7];
-extern float imuData[6]; 
 
 /* --------------------------- Definitions ----------------------------- */
 #define PERIOD_TASK_100MS 100   // ms
@@ -42,9 +35,7 @@ extern float imuData[6];
 /* --------------------------- Functions ----------------------------- */
 /* Background task that runs as often as processor time is available. */
 void task_BG(void)
-{
-    esp_err_t eState;
-    /* Background task that runs as often as processor time is available. */
+{ 
     static qword qwtTaskTimer;
     qwtTaskTimer = esp_timer_get_time();
     astTaskState[eTASK_BG] = eTASK_ACTIVE;
@@ -69,17 +60,6 @@ void task_BG(void)
         }
     }
 
-    eState = sdcard_empty_buffer();
-    if (eState != ESP_OK && eState != ESP_ERR_INVALID_STATE) 
-    {
-        ESP_LOGE(SFR_TAG, "Failed to empty SD card buffer: %s", esp_err_to_name(eState));
-    }
-    if (bFlushSDCard && stFile != NULL) {
-        fflush(stFile); //Flush buffer to card once a second if data to prevent data loss if power loss.
-        fsync(fileno(stFile));
-        bFlushSDCard = FALSE;
-    }
-
     /* Update max task time */
     qwtTaskTimer = esp_timer_get_time() - qwtTaskTimer;
     adwLastTaskTime[eTASK_BG] = (dword)qwtTaskTimer;
@@ -96,17 +76,11 @@ void task_1ms(void)
     qwtTaskTimer = esp_timer_get_time();
     astTaskState[eTASK_1MS] = eTASK_ACTIVE;
 
-    /* CAN Rx */ //NOT DEFINED
-    //CAN_receive(stCANBus0);
-
     /* CAN error handling */
     CANRxCheck1ms();
 
     /* Update time since power up */
     dwTimeSincePowerUpms++;
-
-    /* Update time */
-    
 
     /* Update max task time */
     qwtTaskTimer = esp_timer_get_time() - qwtTaskTimer;
@@ -120,7 +94,7 @@ void task_1ms(void)
 /* Task that runs every 100ms. */
 void task_100ms(void)
 {
-    esp_err_t eState;
+    
     static qword qwtTaskTimer;
     static word wNCounter;
 
@@ -130,34 +104,14 @@ void task_100ms(void)
     /* CAN error handling */
     CANRxCheck1ms();
 
-    //Read and log IMU data
-    imu_read();
-    sdcard_log_imu();
-
     /* Every Second */
     if ( wNCounter % (PERIOD_1S / PERIOD_TASK_100MS) == 0 ) 
     {
         /* Toggle LED */
         pin_toggle(GPIO_ONBOARD_LED); 
 
-        //Update RTC time
-        eState = eternal_clock_read_time();
-        if (eState != ESP_OK && eState != ESP_ERR_INVALID_STATE) 
-        {
-            ESP_LOGE(SFR_TAG, "Failed to read RTC: %s", esp_err_to_name(eState));
-        }
-        sdcard_log_time(); //Log time to SD card
-
-        bFlushSDCard = TRUE;
-        /* Is CAN Queue Full? */
-        if (dwNDroppedCANFrames > 0)
-        {
-            ESP_LOGW(SFR_TAG, "%d CAN frames dropped due to full buffer", (int)dwNDroppedCANFrames);
-        }
-
         /* Send Status Message */
         /* This is not how you should send a CAN message but in this special case it is better this way */
-        //______________________________TO BE REMOVED WHEN NOT TESTING, LOGGER DOES NOT SEND ANY MESSAGES___________________________________________________________
         CAN_transmit(stCANBus0, &(CAN_frame_t)
         {
             .dwID = DEVICE_ID,
@@ -173,7 +127,6 @@ void task_100ms(void)
                 (byte)(((dwTimeSincePowerUpms/4000) & 0xF) << 4 | (eResetReason & 0x0F)),
             }
         });
-        //_____________________________________________________________________________________________________________________________________________________
     };
 
     /* Every 10 Seconds */
