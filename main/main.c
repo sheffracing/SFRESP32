@@ -103,6 +103,7 @@ void IRAM_ATTR call_back_100ms(void *arg)
 
 static void main_init(void)
 {
+    esp_err_t eStatus;
     /* Initialises Features/ Peripherals, Comment out as needed*/
 
     /* ESP-NOW */
@@ -141,20 +142,19 @@ static void main_init(void)
     /* END of SPI Devices*/
     
     /* CAN BUS */
-    // NStatus = CAN_init(TRUE);
-    // if (NStatus != ESP_OK)
-    // {
-    //     ESP_LOGE(SFR_TAG, "Failed to initialise CAN: %s", esp_err_to_name(NStatus));
-    // }
-    // NStatus = CAN_flash_init();
-    // if (NStatus != ESP_OK)
-    // {
-    //     ESP_LOGE(SFR_TAG, "Failed to initialise CAN Reflash: %s", esp_err_to_name(NStatus));
-    // }
+    eStatus = CAN_init(TRUE);
+    if (eStatus != ESP_OK)
+    {
+        ESP_LOGE(SFR_TAG, "Failed to initialise CAN: %s", esp_err_to_name(eStatus));
+    }
+    eStatus = CAN_flash_init();
+    if (eStatus != ESP_OK)
+    {
+        ESP_LOGE(SFR_TAG, "Failed to initialise CAN Reflash: %s", esp_err_to_name(eStatus));
+    }
 
-    /* LDC (SDCard and LCD share the SPI bus, take care) */
+    /* Display */
     NVHDisplay_init();
-
 
     /* External Clock */
     // eStatus = I2C_init();
@@ -206,4 +206,3 @@ void set_device_mode(eChipMode_t mode)
 {
     eDeviceMode = mode;
 }
-
