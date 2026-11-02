@@ -31,6 +31,7 @@ esp_err_t CAN_empty_ESPNOW_buffer(twai_node_handle_t stCANBus);
 bool CAN_receive_callback_no_queue(twai_node_handle_t stCANBus, const twai_rx_done_event_data_t *edata, void *stRxCallback);
 void CAN_CMD_response(twai_frame_t stRxFrame);
 void CAN_clear_rx_buffer(void);
+esp_err_t CAN_read_from_buffer(void);
 
 #define KILL_MSG_ID 0x001
 
