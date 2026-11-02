@@ -40,6 +40,9 @@ void task_BG(void)
     qwtTaskTimer = esp_timer_get_time();
     astTaskState[eTASK_BG] = eTASK_ACTIVE;
 
+    /* Flush CAN buffer to SD card */
+    sdcard_flush_can_buffer();
+
     /* Service the watchdog if all task have been completed at least once */
     word wNTaskCounter = 0;
     boolean bTasksComplete = TRUE;
@@ -75,6 +78,9 @@ void task_1ms(void)
 
     qwtTaskTimer = esp_timer_get_time();
     astTaskState[eTASK_1MS] = eTASK_ACTIVE;
+
+    /* CAN Rx */
+    CAN_receive(stCANBus0);
 
     /* CAN error handling */
     CANRxCheck1ms();
