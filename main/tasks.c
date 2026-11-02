@@ -81,6 +81,10 @@ void task_1ms(void)
 
     /* Update time since power up */
     dwTimeSincePowerUpms++;
+    for (uint16_t NCoutner = 0; NCoutner < NUM_DEVICES * CELLS_PER_DEVICE; NCoutner++)
+    {
+        tSinceVCellms[NCoutner]++;
+    }
 
     /* Update max task time */
     qwtTaskTimer = esp_timer_get_time() - qwtTaskTimer;
