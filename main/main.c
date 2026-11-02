@@ -115,15 +115,15 @@ static void main_init(void)
 
     /* SD Card (SDCard and LCD share the SPI bus, take care) */
     /* SPI Devices */
-    // spi_bus_config_t stBusConfig = 
-    // {
-    //     .mosi_io_num = SPI_MOSI,
-    //     .miso_io_num = SPI_MISO,
-    //     .sclk_io_num = SPI_SCK,
-    //     .quadwp_io_num = -1,
-    //     .quadhd_io_num = -1,
-    // };
-    // eStatus = spi_bus_initialize(SPI2_HOST, &stBusConfig, SPI_DMA_CH_AUTO);
+    spi_bus_config_t stBusConfig = 
+    {
+        .mosi_io_num = SPI2_MOSI,
+        .miso_io_num = SPI2_MISO,
+        .sclk_io_num = SPI2_CLK,
+        .quadwp_io_num = -1,
+        .quadhd_io_num = -1,
+    };
+    eStatus = spi_bus_initialize(SPI2_HOST, &stBusConfig, SPI_DMA_CH_AUTO);
 
     /* SD Card */
     // eStatus = SD_card_init();
@@ -139,6 +139,14 @@ static void main_init(void)
     // {
     //     ESP_LOGE(SFR_TAG, "Failed to initialise MCP320X: %s", esp_err_to_name(eStatus));
     // }
+
+    /* LTC6811 */
+    eStatus = LTC6811_init(SPI2_CS);
+    if (eStatus != ESP_OK)
+    {
+        ESP_LOGE(SFR_TAG, "Failed to initialise LTC6811: %s", esp_err_to_name(eStatus));
+    }
+
     /* END of SPI Devices*/
     
     /* CAN BUS */
@@ -189,14 +197,23 @@ static void timers_init(void)
 
 static void GPIO_init(void)
 {
-    gpio_config_t onboardLEDConfig = {
+    gpio_config_t onboardLED1Config = {
         .pin_bit_mask = 1ULL << LED1,
         .mode = GPIO_MODE_OUTPUT,
         .pull_up_en = 0,
         .pull_down_en = 0,
         .intr_type = GPIO_INTR_DISABLE
     };
-    gpio_config(&onboardLEDConfig);
+    gpio_config(&onboardLED1Config);
+
+    gpio_config_t onboardLED2Config = {
+        .pin_bit_mask = 1ULL << LED2,
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = 0,
+        .pull_down_en = 0,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    gpio_config(&onboardLED2Config);
 }
 
 void set_device_mode(eChipMode_t mode)

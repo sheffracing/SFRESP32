@@ -15,10 +15,13 @@ Command codes page 61
 */
 
 /* --------------------------- Function prototypes -------------------- */
-esp_err_t LTC6811_init(uint8_t NCSPin, spi_device_handle_t stDeviceHandle);
-esp_err_t BC_Write(spi_device_handle_t stDeviceHandle, uint16_t CMD, uint16_t NBytes, uint8_t *aData);
-esp_err_t BC_Read(spi_device_handle_t stDeviceHandle, uint16_t CMD, uint16_t NBytes, uint8_t *aData);
-uint32_t PEC15_calc(uint8_t NLen, uint8_t *pData);
+esp_err_t LTC6811_init(uint8_t NCSPin);
+esp_err_t BC_Write(uint16_t CMD, uint16_t NBytes, uint8_t *aData);
+esp_err_t BC_Read(uint16_t CMD, uint8_t *aData);
+esp_err_t read_VCell(uint16_t CMD);
+esp_err_t read_Status(uint16_t CMD);
+esp_err_t read_Aux(uint16_t CMD);
+uint16_t PEC15_calc(uint16_t NBytes, const uint8_t *aData); 
 
 /* Global Variables */
 extern uint16_t aVCell[];
@@ -29,7 +32,8 @@ extern float aVCellActual[];
 /* --------------------------- Custom Codes -------------------------- */
 #define CFGR0  0b00000100 // Configuration Register Group 0 Defaults (REFON = 1)
 #define CELLS_PER_DEVICE 11 // Number of cells per LTC6811 device
-#define NUM_DEVICES 2 // Number of LTC6811 devices in the stack
+#define NUM_DEVICES 1 // Number of LTC6811 devices in the stack
+#define BYTES_PER_REGISTER 6 // Number of bytes per register group
 
 /* --------------------------- Command Codes -------------------------- */
 #define WRCFGA  0b00000000001 // Write Configuration Register Group A

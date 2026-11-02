@@ -98,9 +98,12 @@ void task_1ms(void)
 /* Task that runs every 100ms. */
 void task_100ms(void)
 {
-    
     static uint64_t tTaskTimer;
     static uint16_t NCounter;
+    static bool BLED1State = false;
+    static bool BLED2State = false;
+    esp_err_t eStatus;
+    uint8_t aBMSData[BYTES_PER_REGISTER * NUM_DEVICES];
 
     tTaskTimer = esp_timer_get_time();
     astTaskState[eTASK_100MS] = eTASK_ACTIVE;
@@ -108,11 +111,16 @@ void task_100ms(void)
     /* CAN error handling */
     CANRxCheck1ms();
 
+    /* Toggle LED */
+    BLED1State = !BLED1State;
+    gpio_set_level(LED1, BLED1State);
+
     /* Every Second */
     if ( NCounter % (PERIOD_1S / PERIOD_TASK_100MS) == 0 ) 
     {
         /* Toggle LED */
-        pin_toggle(LED1); 
+        BLED2State = !BLED2State;
+        gpio_set_level(LED2, BLED2State);
 
         /* Send Status Message */
         /* This is not how you should send a CAN message but in this special case it is better this way */
@@ -148,6 +156,18 @@ void task_100ms(void)
             (int)atTaskLast[eTASK_100MS]);
         NCounter = 0;
         #endif
+
+    /* Testing */
+    eStatus = BC_Read(RDSTATA, aBMSData);
+    if (eStatus != ESP_OK)
+    {
+        ESP_LOGE(SFR_TAG, "LTC6811 Fail: %s", esp_err_to_name(eStatus));
+    } else
+    {
+        ESP_LOGI(SFR_TAG, "LTC6811 Data: %02X %02X %02X %02X %02X %02X", 
+            aBMSData[0], aBMSData[1], aBMSData[2], aBMSData[3], aBMSData[4], aBMSData[5]);
+    }
+
     }
     NCounter++;
 
@@ -172,7 +192,11 @@ void reflash_task_1ms(void)
 /* Task that runs every 100ms in reflash mode */
 void reflash_task_100ms(void)
 {
-    pin_toggle(LED1);
+    static bool BLED1State = false;
+
+    /* Toggle LED */
+    BLED1State = !BLED1State;
+    gpio_set_level(LED1, BLED1State);
 }
 
 /* Background task for reflash mode */
@@ -232,9 +256,3 @@ void reflash_task_BG()
     }
 }
 
-void pin_toggle(gpio_num_t ePin)
-{
-    static bool BLEDState = false;
-    BLEDState = !BLEDState;
-    gpio_set_level(ePin, BLEDState);
-}
